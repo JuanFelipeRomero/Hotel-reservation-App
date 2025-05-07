@@ -25,13 +25,13 @@ public class Room {
    private RoomType roomType;
 
    @Column(name = "price_per_night", nullable = false)
-   private double pricePerNight;
+   private int pricePerNight;
 
    // Constructors
    public Room() {
    }
 
-   public Room(String roomNumber, RoomType roomType, double pricePerNight) {
+   public Room(String roomNumber, RoomType roomType, int pricePerNight) {
       this.roomNumber = roomNumber;
       this.roomType = roomType;
       this.pricePerNight = pricePerNight;
@@ -66,7 +66,7 @@ public class Room {
       return pricePerNight;
    }
 
-   public void setPricePerNight(double pricePerNight) {
+   public void setPricePerNight(int pricePerNight) {
       this.pricePerNight = pricePerNight;
    }
 
