@@ -29,10 +29,12 @@ public class AvailabilityCheckForm extends JFrame {
    private JComboBox<RoomType> roomTypeComboBox;
    private JButton checkAvailabilityButton;
    private JTextArea resultsArea;
+   private final AvailabilityService availabilityService;
    private final RabbitTemplate rabbitTemplate;
    private static final DateTimeFormatter DTO_DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
 
    public AvailabilityCheckForm(AvailabilityService availabilityService, RabbitTemplate rabbitTemplate) {
+      this.availabilityService = availabilityService;
       this.rabbitTemplate = rabbitTemplate;
 
       setTitle("Hotel Room Availability Check");
@@ -109,6 +111,8 @@ public class AvailabilityCheckForm extends JFrame {
    }
 
    private void handleCheckAvailability() {
+      resultsArea.setText("Checking availability...");
+
       Date selectedCheckInUtilDate = (Date) checkInDatePicker.getModel().getValue();
       Date selectedCheckOutUtilDate = (Date) checkOutDatePicker.getModel().getValue();
       RoomType selectedRoomType = (RoomType) roomTypeComboBox.getSelectedItem();
@@ -127,6 +131,10 @@ public class AvailabilityCheckForm extends JFrame {
       }
 
       try {
+         if (this.rabbitTemplate == null) {
+            resultsArea.setText("Error: RabbitMQ connection not available.");
+            return;
+         }
          AvailabilityRequestDTO requestDTO = new AvailabilityRequestDTO(
                checkInLocalDate.format(DTO_DATE_FORMATTER),
                checkOutLocalDate.format(DTO_DATE_FORMATTER),
@@ -137,9 +145,9 @@ public class AvailabilityCheckForm extends JFrame {
                requestDTO);
          System.out.println("UI Form: Data sent to RabbitMQ (Exchange: " + RabbitMQConfig.EXCHANGE_DISPONIBILIDAD
                + ", RoutingKey: " + RabbitMQConfig.ROUTING_KEY_VERIFICAR_DISPONIBILIDAD + ") -> " + requestDTO);
-         resultsArea.setText("Availability request sent. Listener will process via cola_reservaciones.");
+         resultsArea.setText("Availability check request sent. Waiting for results...");
       } catch (Exception ex) {
-         System.err.println("AvailabilityCheckForm: Error sending DTO message to RabbitMQ: " + ex.getMessage());
+         System.err.println("AvailabilityCheckForm: Error sending initial request DTO to RabbitMQ: " + ex.getMessage());
          resultsArea.setText("Error sending availability request. Please check logs.");
       }
    }

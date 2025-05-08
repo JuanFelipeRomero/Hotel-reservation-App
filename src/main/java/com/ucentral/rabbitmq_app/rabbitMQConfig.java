@@ -24,6 +24,11 @@ public class RabbitMQConfig {
    // Routing key from form to this queue via the exchange
    public static final String ROUTING_KEY_VERIFICAR_DISPONIBILIDAD = "verificar_disponibilidad";
 
+   // For Processed Reservation Details (Service -> New Queue)
+   public static final String EXCHANGE_PROCESSED_DETAILS = "direct.reservaciones";
+   public static final String QUEUE_PROCESSED_DETAILS = "cola_reservaciones";
+   public static final String ROUTING_KEY_PROCESSED_DETAIL = "reserva_disponible";
+
    @Bean
    public DirectExchange disponibilidadExchange() {
       return new DirectExchange(EXCHANGE_DISPONIBILIDAD);
@@ -31,7 +36,6 @@ public class RabbitMQConfig {
 
    @Bean
    public Queue colaReservacionesParaDisponibilidad() {
-
       return new Queue(QUEUE_RESERVACIONES_PARA_DISPONIBILIDAD, true, false, false);
    }
 
@@ -41,6 +45,25 @@ public class RabbitMQConfig {
       return BindingBuilder.bind(colaReservacionesParaDisponibilidad) // Source is the queue bean
             .to(disponibilidadExchange) // Target is the exchange bean
             .with(ROUTING_KEY_VERIFICAR_DISPONIBILIDAD); // Routing key
+   }
+
+   // Beans for Processed Reservation Details Flow
+   @Bean
+   public DirectExchange processedDetailsExchange() {
+      return new DirectExchange(EXCHANGE_PROCESSED_DETAILS);
+   }
+
+   @Bean
+   public Queue processedDetailsQueue() {
+      return new Queue(QUEUE_PROCESSED_DETAILS, true, false, false);
+   }
+
+   @Bean
+   public Binding bindingProcessedDetails(Queue processedDetailsQueue,
+         DirectExchange processedDetailsExchange) {
+      return BindingBuilder.bind(processedDetailsQueue)
+            .to(processedDetailsExchange)
+            .with(ROUTING_KEY_PROCESSED_DETAIL);
    }
 
    // Define the MessageConverter Bean that RabbitTemplate will use

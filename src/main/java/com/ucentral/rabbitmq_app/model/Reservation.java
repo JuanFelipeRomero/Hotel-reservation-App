@@ -25,6 +25,9 @@ public class Reservation { // Consider renaming class to Reservation
    @Column(name = "guest_name", nullable = false)
    private String guestName;
 
+   @Column(name = "guest_id", nullable = false)
+   private String guestId;
+
    @Column(name = "check_in_date", nullable = false)
    private LocalDate checkInDate;
 
@@ -35,9 +38,10 @@ public class Reservation { // Consider renaming class to Reservation
    public Reservation() {
    }
 
-   public Reservation(Room room, String guestName, LocalDate checkInDate, LocalDate checkOutDate) {
+   public Reservation(Room room, String guestName, String guestId, LocalDate checkInDate, LocalDate checkOutDate) {
       this.room = room;
       this.guestName = guestName;
+      this.guestId = guestId;
       this.checkInDate = checkInDate;
       this.checkOutDate = checkOutDate;
    }
@@ -67,6 +71,14 @@ public class Reservation { // Consider renaming class to Reservation
       this.guestName = guestName;
    }
 
+   public String getGuestId() {
+      return guestId;
+   }
+
+   public void setGuestId(String guestId) {
+      this.guestId = guestId;
+   }
+
    public LocalDate getCheckInDate() {
       return checkInDate;
    }
@@ -86,11 +98,11 @@ public class Reservation { // Consider renaming class to Reservation
    // toString() method (optional, but useful for logging/debugging)
    @Override
    public String toString() {
-      return "Reservartion{" + // Consider renaming class to Reservation
+      return "Reservation{" +
             "id=" + id +
-            ", room=" + (room != null ? room.getId() : null) + // Avoids potential NullPointerException if room is not
-                                                               // // prints Reservation
+            ", room=" + (room != null ? room.getId() : null) +
             ", guestName='" + guestName + "'" +
+            ", guestId='" + guestId + "'" +
             ", checkInDate=" + checkInDate +
             ", checkOutDate=" + checkOutDate +
             '}';
