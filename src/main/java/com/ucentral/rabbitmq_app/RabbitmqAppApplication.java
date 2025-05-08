@@ -2,6 +2,7 @@ package com.ucentral.rabbitmq_app;
 
 import com.ucentral.rabbitmq_app.services.AvailabilityService;
 import com.ucentral.rabbitmq_app.ui.AvailabilityCheckForm;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -22,12 +23,12 @@ public class RabbitmqAppApplication {
 	}
 
 	@Bean
-	public CommandLineRunner launchSwingUI(AvailabilityService availabilityService) {
+	public CommandLineRunner launchSwingUI(AvailabilityService availabilityService, RabbitTemplate rabbitTemplate) {
 		return args -> {
 			// Ensure UI updates are on the Event Dispatch Thread (EDT)
 			SwingUtilities.invokeLater(() -> {
-				// Pass the service to the form
-				AvailabilityCheckForm form = new AvailabilityCheckForm(availabilityService);
+				// Pass both services to the form
+				AvailabilityCheckForm form = new AvailabilityCheckForm(availabilityService, rabbitTemplate);
 				form.setVisible(true);
 			});
 		};

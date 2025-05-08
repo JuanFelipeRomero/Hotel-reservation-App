@@ -1,10 +1,13 @@
 package com.ucentral.rabbitmq_app.ui;
 
+import com.ucentral.rabbitmq_app.RabbitMQConfig;
+import com.ucentral.rabbitmq_app.dto.AvailabilityRequestDTO;
 import com.ucentral.rabbitmq_app.model.RoomType;
 import com.ucentral.rabbitmq_app.services.AvailabilityService;
 import org.jdatepicker.impl.JDatePanelImpl;
 import org.jdatepicker.impl.JDatePickerImpl;
 import org.jdatepicker.impl.UtilDateModel;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 
 import javax.swing.*;
 import java.awt.*;
@@ -14,6 +17,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Properties;
@@ -25,10 +29,11 @@ public class AvailabilityCheckForm extends JFrame {
    private JComboBox<RoomType> roomTypeComboBox;
    private JButton checkAvailabilityButton;
    private JTextArea resultsArea;
-   private final AvailabilityService availabilityService;
+   private final RabbitTemplate rabbitTemplate;
+   private static final DateTimeFormatter DTO_DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
 
-   public AvailabilityCheckForm(AvailabilityService availabilityService) {
-      this.availabilityService = availabilityService;
+   public AvailabilityCheckForm(AvailabilityService availabilityService, RabbitTemplate rabbitTemplate) {
+      this.rabbitTemplate = rabbitTemplate;
 
       setTitle("Hotel Room Availability Check");
       setSize(500, 450);
@@ -121,9 +126,22 @@ public class AvailabilityCheckForm extends JFrame {
          return;
       }
 
-      String availabilityResult = availabilityService.checkAvailability(checkInLocalDate, checkOutLocalDate,
-            selectedRoomType);
-      resultsArea.setText(availabilityResult);
+      try {
+         AvailabilityRequestDTO requestDTO = new AvailabilityRequestDTO(
+               checkInLocalDate.format(DTO_DATE_FORMATTER),
+               checkOutLocalDate.format(DTO_DATE_FORMATTER),
+               selectedRoomType.name());
+
+         rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_DISPONIBILIDAD,
+               RabbitMQConfig.ROUTING_KEY_VERIFICAR_DISPONIBILIDAD,
+               requestDTO);
+         System.out.println("UI Form: Data sent to RabbitMQ (Exchange: " + RabbitMQConfig.EXCHANGE_DISPONIBILIDAD
+               + ", RoutingKey: " + RabbitMQConfig.ROUTING_KEY_VERIFICAR_DISPONIBILIDAD + ") -> " + requestDTO);
+         resultsArea.setText("Availability request sent. Listener will process via cola_reservaciones.");
+      } catch (Exception ex) {
+         System.err.println("AvailabilityCheckForm: Error sending DTO message to RabbitMQ: " + ex.getMessage());
+         resultsArea.setText("Error sending availability request. Please check logs.");
+      }
    }
 
    public static class DateLabelFormatter extends JFormattedTextField.AbstractFormatter {
@@ -146,6 +164,6 @@ public class AvailabilityCheckForm extends JFrame {
    }
 
    public static void main(String[] args) {
-      SwingUtilities.invokeLater(() -> new AvailabilityCheckForm(null).setVisible(true));
+      SwingUtilities.invokeLater(() -> new AvailabilityCheckForm(null, null).setVisible(true));
    }
 }
