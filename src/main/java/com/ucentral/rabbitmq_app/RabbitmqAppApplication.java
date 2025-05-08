@@ -1,6 +1,7 @@
 package com.ucentral.rabbitmq_app;
 
 import com.ucentral.rabbitmq_app.dto.RoomAvailableEventData;
+import com.ucentral.rabbitmq_app.dto.RoomNotAvailableEventData;
 import com.ucentral.rabbitmq_app.services.AvailabilityService;
 import com.ucentral.rabbitmq_app.ui.AvailabilityCheckForm;
 import com.ucentral.rabbitmq_app.ui.BookingConfirmationForm;
@@ -57,6 +58,34 @@ public class RabbitmqAppApplication {
 			// Use the class-level rabbitTemplate for the booking form
 			BookingConfirmationForm bookingForm = new BookingConfirmationForm(mainForm, eventData, this.rabbitTemplate);
 			bookingForm.setVisible(true);
+		});
+	}
+
+	// New Event Listener for Room Not Available
+	@EventListener
+	public void handleRoomNotAvailable(RoomNotAvailableEventData eventData) {
+		System.out.println("Application Event Listener: Received RoomNotAvailableEvent: " + eventData);
+		// Ensure UI update happens on the EDT
+		SwingUtilities.invokeLater(() -> {
+			String message = String.format(
+					"Sorry, no rooms of type '%s' are available between %s and %s.",
+					eventData.getRoomType(),
+					eventData.getCheckInDate(),
+					eventData.getCheckOutDate());
+			JOptionPane.showMessageDialog(mainForm, // Parent component
+					message,
+					"No Availability",
+					JOptionPane.INFORMATION_MESSAGE);
+			// Also update the main form's text area
+			if (mainForm != null) {
+				// Assuming AvailabilityCheckForm has a method like this:
+				// mainForm.updateResultArea(message);
+				// Or access it directly if needed and safe
+				JTextArea resultsArea = mainForm.getResultsArea(); // Need a getter for this
+				if (resultsArea != null) {
+					resultsArea.setText(message);
+				}
+			}
 		});
 	}
 }

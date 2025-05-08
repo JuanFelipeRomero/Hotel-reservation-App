@@ -174,4 +174,9 @@ public class AvailabilityCheckForm extends JFrame {
    public static void main(String[] args) {
       SwingUtilities.invokeLater(() -> new AvailabilityCheckForm(null, null).setVisible(true));
    }
+
+   // Add a getter for the results area
+   public JTextArea getResultsArea() {
+      return resultsArea;
+   }
 }

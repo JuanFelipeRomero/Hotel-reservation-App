@@ -3,6 +3,7 @@ package com.ucentral.rabbitmq_app.services;
 import com.ucentral.rabbitmq_app.RabbitMQConfig; // For queue name constant
 import com.ucentral.rabbitmq_app.dto.AvailabilityRequestDTO;
 import com.ucentral.rabbitmq_app.dto.RoomAvailableEventData; // Import for event data
+import com.ucentral.rabbitmq_app.dto.RoomNotAvailableEventData; // Added import
 import com.ucentral.rabbitmq_app.model.Reservation;
 import com.ucentral.rabbitmq_app.model.Room;
 import com.ucentral.rabbitmq_app.model.RoomType;
@@ -56,6 +57,8 @@ public class AvailabilityService {
       }
 
       String availabilityMessage = "No rooms of type " + roomType + " are available for the selected dates.";
+      boolean wasRoomAvailable = false; // Flag to track if we found one
+
       List<Room> roomsOfType = roomRepository.findAll().stream()
             .filter(room -> room.getRoomType() == roomType)
             .collect(Collectors.toList());
@@ -72,6 +75,7 @@ public class AvailabilityService {
 
             if (conflictingReservations.isEmpty()) {
                availableRoom = room; // Capture the available room
+               wasRoomAvailable = true; // Set flag
                availabilityMessage = String.format(
                      "Room Available! Number: %s, Type: %s, Price: $%.2f For dates: %s to %s",
                      room.getRoomNumber(), room.getRoomType(), room.getPricePerNight(),
@@ -82,7 +86,7 @@ public class AvailabilityService {
       }
       System.out.println("AvailabilityService (Listener): Validation Result -> " + availabilityMessage);
 
-      if (availableRoom != null) {
+      if (wasRoomAvailable && availableRoom != null) {
          // Publish an event with the available room details
          RoomAvailableEventData eventData = new RoomAvailableEventData(
                availableRoom.getId(),
@@ -94,7 +98,13 @@ public class AvailabilityService {
          eventPublisher.publishEvent(eventData); // Publishing the data directly as the event object
          System.out.println("Service Listener: Published RoomAvailableEvent with data: " + eventData);
       } else {
-         System.out.println("Service Listener: No available room found, no event published.");
+         // Publish an event indicating no room was available
+         RoomNotAvailableEventData notAvailableEventData = new RoomNotAvailableEventData(
+               checkInDate.format(DATE_FORMATTER),
+               checkOutDate.format(DATE_FORMATTER),
+               roomType);
+         eventPublisher.publishEvent(notAvailableEventData);
+         System.out.println("Service Listener: No available room found, published RoomNotAvailableEvent.");
       }
 
       // Original detailed logging for console (can be removed or kept)
