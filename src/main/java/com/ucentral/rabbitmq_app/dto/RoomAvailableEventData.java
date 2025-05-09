@@ -2,14 +2,13 @@ package com.ucentral.rabbitmq_app.dto;
 
 import com.ucentral.rabbitmq_app.model.RoomType;
 
-// This DTO carries data from AvailabilityService to the UI event listener
 public class RoomAvailableEventData {
    private Long roomId;
    private String roomNumber;
    private RoomType roomType;
    private Double pricePerNight;
-   private String checkInDate; // yyyy-MM-dd
-   private String checkOutDate; // yyyy-MM-dd
+   private String checkInDate;
+   private String checkOutDate;
 
    public RoomAvailableEventData(Long roomId, String roomNumber, RoomType roomType, Double pricePerNight,
          String checkInDate, String checkOutDate) {

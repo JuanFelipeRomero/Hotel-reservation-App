@@ -3,7 +3,6 @@ package com.ucentral.rabbitmq_app.dto;
 import com.ucentral.rabbitmq_app.model.RoomType;
 
 public class FinalBookingDetailsDTO {
-   // Details from the originally found available room
    private Long roomId;
    private String roomNumber;
    private RoomType roomType;
@@ -11,12 +10,10 @@ public class FinalBookingDetailsDTO {
    private String checkInDate; // yyyy-MM-dd
    private String checkOutDate; // yyyy-MM-dd
 
-   // Details from the new booking confirmation form
    private String guestName;
    private String guestId;
    private String guestEmail;
 
-   // No-arg constructor for Jackson
    public FinalBookingDetailsDTO() {
    }
 
@@ -34,7 +31,6 @@ public class FinalBookingDetailsDTO {
       this.guestEmail = guestEmail;
    }
 
-   // Getters and Setters
    public Long getRoomId() {
       return roomId;
    }

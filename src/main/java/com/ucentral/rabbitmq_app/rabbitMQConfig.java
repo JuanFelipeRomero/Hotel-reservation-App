@@ -16,22 +16,19 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitMQConfig {
 
-   // Exchange for availability requests
+   // Intercambio para solicitudes de disponibilidad
    public static final String EXCHANGE_DISPONIBILIDAD = "direct.disponibilidad";
 
-   // Queue that AvailabilityService listens to
    public static final String QUEUE_RESERVACIONES_PARA_DISPONIBILIDAD = "cola_disponibilidad";
 
-   // Routing key from form to this queue via the exchange
    public static final String ROUTING_KEY_VERIFICAR_DISPONIBILIDAD = "verificar_disponibilidad";
 
-   // For Processed Reservation Details (Service -> New Queue)
+   // Para Detalles de Reserva Procesados
    public static final String EXCHANGE_PROCESSED_DETAILS = "direct.reservaciones";
    public static final String QUEUE_PROCESSED_DETAILS = "cola_reservaciones";
    public static final String ROUTING_KEY_PROCESSED_DETAIL = "detalle_procesado_reserva";
 
-   // For Confirmed Reservation Events (DB Registration Service -> Fanout to other
-   // services)
+   // Para Eventos de Reserva Confirmada
    public static final String EXCHANGE_RESERVA_CONFIRMADA = "evento.reserva_confirmada";
    public static final String QUEUE_LIMPIEZA = "cola_limpieza";
    public static final String QUEUE_NOTIFICACIONES = "cola_notificaciones";
@@ -49,12 +46,12 @@ public class RabbitMQConfig {
    @Bean
    public Binding bindingDisponibilidadToColaReservaciones(Queue colaReservacionesParaDisponibilidad,
          DirectExchange disponibilidadExchange) {
-      return BindingBuilder.bind(colaReservacionesParaDisponibilidad) // Source is the queue bean
-            .to(disponibilidadExchange) // Target is the exchange bean
-            .with(ROUTING_KEY_VERIFICAR_DISPONIBILIDAD); // Routing key
+      return BindingBuilder.bind(colaReservacionesParaDisponibilidad)
+            .to(disponibilidadExchange)
+            .with(ROUTING_KEY_VERIFICAR_DISPONIBILIDAD);
    }
 
-   // Beans for Processed Reservation Details Flow
+   // Flujo de Detalles de Reserva Procesados
    @Bean
    public DirectExchange processedDetailsExchange() {
       return new DirectExchange(EXCHANGE_PROCESSED_DETAILS);
@@ -73,7 +70,7 @@ public class RabbitMQConfig {
             .with(ROUTING_KEY_PROCESSED_DETAIL);
    }
 
-   // Beans for Confirmed Reservation Event Flow
+   // Flujo de Eventos de Reserva Confirmada
    @Bean
    public FanoutExchange reservaConfirmadaExchange() {
       return new FanoutExchange(EXCHANGE_RESERVA_CONFIRMADA);
@@ -100,14 +97,13 @@ public class RabbitMQConfig {
       return BindingBuilder.bind(notificacionesQueue).to(reservaConfirmadaExchange);
    }
 
-   // Define the MessageConverter Bean that RabbitTemplate will use
+   // Define el Bean MessageConverter que RabbitTemplate usará
    @Bean
    public MessageConverter jackson2JsonMessageConverter(ObjectMapper objectMapper) {
       return new Jackson2JsonMessageConverter(objectMapper);
    }
 
-   // RabbitTemplate will automatically use the MessageConverter bean defined
-   // above.
+   // RabbitTemplate usará automáticamente el bean MessageConverter definido
    @Bean
    public RabbitTemplate rabbitTemplate(final ConnectionFactory connectionFactory,
          final MessageConverter messageConverter) {
@@ -116,17 +112,4 @@ public class RabbitMQConfig {
       return rabbitTemplate;
    }
 
-   // Define your Queues, Exchanges, and Bindings as beans here.
-   // For example:
-   /*
-    * public static final String MY_QUEUE_NAME = "myExampleQueue";
-    * 
-    * @Bean
-    * public Queue myQueue() {
-    * // durable: true, exclusive: false, autoDelete: false
-    * return new Queue(MY_QUEUE_NAME, true, false, false);
-    * }
-    */
-
-   // You would also define Exchanges and Bindings if you're using them.
 }

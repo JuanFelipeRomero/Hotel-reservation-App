@@ -10,7 +10,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-public class BookingConfirmationForm extends JDialog { // Use JDialog for secondary window
+public class BookingConfirmationForm extends JDialog {
 
    private final RoomAvailableEventData availableRoomData;
    private final RabbitTemplate rabbitTemplate;
@@ -21,16 +21,16 @@ public class BookingConfirmationForm extends JDialog { // Use JDialog for second
    private JButton confirmButton;
    private JTextArea detailsArea;
 
-   public BookingConfirmationForm(Frame owner, // Parent frame (can be null)
+   public BookingConfirmationForm(Frame owner,
          RoomAvailableEventData availableRoomData,
          RabbitTemplate rabbitTemplate) {
-      super(owner, "Confirm Booking", true); // Modal dialog
+      super(owner, "Confirmar Reserva", true);
       this.availableRoomData = availableRoomData;
       this.rabbitTemplate = rabbitTemplate;
 
       setSize(450, 400);
-      setLocationRelativeTo(owner); // Center relative to owner
-      setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE); // Close only this dialog
+      setLocationRelativeTo(owner);
+      setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 
       initComponents();
       layoutComponents();
@@ -47,12 +47,12 @@ public class BookingConfirmationForm extends JDialog { // Use JDialog for second
       guestNameField = new JTextField(20);
       guestIdField = new JTextField(20);
       guestEmailField = new JTextField(20);
-      confirmButton = new JButton("Confirm Booking");
+      confirmButton = new JButton("Confirmar Reserva");
    }
 
    private void populateDetails() {
       detailsArea.setText(String.format(
-            "Room Available!\nNumber: %s\nType: %s\nPrice: $%.2f\nDates: %s to %s",
+            "****Habitación Disponible****\nNúmero: %s\nTipo: %s\nPrecio: $%.2f\nFechas: %s a %s",
             availableRoomData.getRoomNumber(),
             availableRoomData.getRoomType(),
             availableRoomData.getPricePerNight(),
@@ -62,11 +62,11 @@ public class BookingConfirmationForm extends JDialog { // Use JDialog for second
 
    private void layoutComponents() {
       JPanel detailsPanel = new JPanel(new BorderLayout(5, 5));
-      detailsPanel.setBorder(BorderFactory.createTitledBorder("Available Room Details"));
+      detailsPanel.setBorder(BorderFactory.createTitledBorder("Detalles de la Habitación Disponible"));
       detailsPanel.add(new JScrollPane(detailsArea), BorderLayout.CENTER);
 
       JPanel formPanel = new JPanel(new GridBagLayout());
-      formPanel.setBorder(BorderFactory.createTitledBorder("Guest Information"));
+      formPanel.setBorder(BorderFactory.createTitledBorder("Información del Huésped"));
       GridBagConstraints gbc = new GridBagConstraints();
       gbc.insets = new Insets(5, 5, 5, 5);
       gbc.anchor = GridBagConstraints.WEST;
@@ -74,21 +74,21 @@ public class BookingConfirmationForm extends JDialog { // Use JDialog for second
 
       gbc.gridx = 0;
       gbc.gridy = 0;
-      formPanel.add(new JLabel("Guest Name:"), gbc);
+      formPanel.add(new JLabel("Nombre del Huésped:"), gbc);
       gbc.gridx = 1;
       gbc.gridy = 0;
       formPanel.add(guestNameField, gbc);
 
       gbc.gridx = 0;
       gbc.gridy = 1;
-      formPanel.add(new JLabel("Guest ID/Number:"), gbc);
+      formPanel.add(new JLabel("Identificacion del Huesped"), gbc);
       gbc.gridx = 1;
       gbc.gridy = 1;
       formPanel.add(guestIdField, gbc);
 
       gbc.gridx = 0;
       gbc.gridy = 2;
-      formPanel.add(new JLabel("Guest Email:"), gbc);
+      formPanel.add(new JLabel("Email del Huésped:"), gbc);
       gbc.gridx = 1;
       gbc.gridy = 2;
       formPanel.add(guestEmailField, gbc);
@@ -117,12 +117,11 @@ public class BookingConfirmationForm extends JDialog { // Use JDialog for second
       String guestEmail = guestEmailField.getText();
 
       if (guestName.trim().isEmpty() || guestId.trim().isEmpty() || guestEmail.trim().isEmpty()) {
-         JOptionPane.showMessageDialog(this, "Please enter Guest Name, ID, and Email.", "Input Required",
+         JOptionPane.showMessageDialog(this, "Por favor, ingrese Nombre, ID y Email del huésped.", "Entrada Requerida",
                JOptionPane.WARNING_MESSAGE);
          return;
       }
 
-      // Create the final DTO
       FinalBookingDetailsDTO finalDetails = new FinalBookingDetailsDTO(
             availableRoomData.getRoomId(),
             availableRoomData.getRoomNumber(),
@@ -134,19 +133,18 @@ public class BookingConfirmationForm extends JDialog { // Use JDialog for second
             guestId,
             guestEmail);
 
-      // Send to RabbitMQ
       try {
          rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_PROCESSED_DETAILS,
                RabbitMQConfig.ROUTING_KEY_PROCESSED_DETAIL,
                finalDetails);
-         System.out.println("BookingConfirmationForm: Sent FinalBookingDetailsDTO to RabbitMQ: " + finalDetails);
-         // Close the dialog after sending
-         JOptionPane.showMessageDialog(this, "Booking request sent successfully!", "Request Sent",
+         System.out.println("FinalBookingDetailsDTO enviado a RabbitMQ: " + finalDetails);
+         JOptionPane.showMessageDialog(this, "¡Solicitud de reserva enviada exitosamente!", "Solicitud Enviada",
                JOptionPane.INFORMATION_MESSAGE);
          dispose();
       } catch (Exception ex) {
-         System.err.println("BookingConfirmationForm: Error sending final booking message: " + ex.getMessage());
-         JOptionPane.showMessageDialog(this, "Error sending booking request. Please check logs.", "Error",
+         System.err.println("Error al enviar mensaje final de reserva: " + ex.getMessage());
+         JOptionPane.showMessageDialog(this, "Error al enviar la solicitud de reserva. Por favor, revise los logs.",
+               "Error",
                JOptionPane.ERROR_MESSAGE);
       }
    }

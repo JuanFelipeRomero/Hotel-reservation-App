@@ -12,7 +12,7 @@ import java.time.LocalDate;
 
 @Entity
 @Table(name = "reservations")
-public class Reservation { // Consider renaming class to Reservation
+public class Reservation {
 
    @Id
    @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,7 +28,7 @@ public class Reservation { // Consider renaming class to Reservation
    @Column(name = "guest_id", nullable = false)
    private String guestId;
 
-   @Column(name = "guest_email") // Nullable for now, can be made false later
+   @Column(name = "guest_email")
    private String guestEmail;
 
    @Column(name = "check_in_date", nullable = false)
@@ -37,7 +37,6 @@ public class Reservation { // Consider renaming class to Reservation
    @Column(name = "check_out_date", nullable = false)
    private LocalDate checkOutDate;
 
-   // Constructors
    public Reservation() {
    }
 

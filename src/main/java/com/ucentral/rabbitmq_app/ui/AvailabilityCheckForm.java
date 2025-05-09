@@ -28,7 +28,6 @@ public class AvailabilityCheckForm extends JFrame {
    private JDatePickerImpl checkOutDatePicker;
    private JComboBox<RoomType> roomTypeComboBox;
    private JButton checkAvailabilityButton;
-   private JTextArea resultsArea;
    private final AvailabilityService availabilityService;
    private final RabbitTemplate rabbitTemplate;
    private static final DateTimeFormatter DTO_DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
@@ -37,8 +36,8 @@ public class AvailabilityCheckForm extends JFrame {
       this.availabilityService = availabilityService;
       this.rabbitTemplate = rabbitTemplate;
 
-      setTitle("Hotel Room Availability Check");
-      setSize(500, 450);
+      setTitle("Verificación de Disponibilidad de Habitaciones");
+      setSize(500, 250);
       setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
       setLocationRelativeTo(null);
 
@@ -51,9 +50,9 @@ public class AvailabilityCheckForm extends JFrame {
       UtilDateModel checkInModel = new UtilDateModel();
       UtilDateModel checkOutModel = new UtilDateModel();
       Properties p = new Properties();
-      p.put("text.today", "Today");
-      p.put("text.month", "Month");
-      p.put("text.year", "Year");
+      p.put("text.today", "Hoy");
+      p.put("text.month", "Mes");
+      p.put("text.year", "Año");
       JDatePanelImpl checkInDatePanel = new JDatePanelImpl(checkInModel, p);
       JDatePanelImpl checkOutDatePanel = new JDatePanelImpl(checkOutModel, p);
 
@@ -61,9 +60,7 @@ public class AvailabilityCheckForm extends JFrame {
       checkOutDatePicker = new JDatePickerImpl(checkOutDatePanel, new DateLabelFormatter());
 
       roomTypeComboBox = new JComboBox<>(RoomType.values());
-      checkAvailabilityButton = new JButton("Check Availability");
-      resultsArea = new JTextArea(10, 40);
-      resultsArea.setEditable(false);
+      checkAvailabilityButton = new JButton("Verificar Disponibilidad");
    }
 
    private void layoutComponents() {
@@ -75,30 +72,28 @@ public class AvailabilityCheckForm extends JFrame {
 
       gbc.gridx = 0;
       gbc.gridy = 0;
-      inputPanel.add(new JLabel("Check-in Date:"), gbc);
+      inputPanel.add(new JLabel("Fecha de Entrada:"), gbc);
       gbc.gridx = 1;
       inputPanel.add(checkInDatePicker, gbc);
 
       gbc.gridx = 0;
       gbc.gridy = 1;
-      inputPanel.add(new JLabel("Check-out Date:"), gbc);
+      inputPanel.add(new JLabel("Fecha de Salida:"), gbc);
       gbc.gridx = 1;
       inputPanel.add(checkOutDatePicker, gbc);
 
       gbc.gridx = 0;
       gbc.gridy = 2;
-      inputPanel.add(new JLabel("Room Type:"), gbc);
+      inputPanel.add(new JLabel("Tipo de Habitación:"), gbc);
       gbc.gridx = 1;
       inputPanel.add(roomTypeComboBox, gbc);
 
       JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
       buttonPanel.add(checkAvailabilityButton);
-      JScrollPane scrollPane = new JScrollPane(resultsArea);
 
       setLayout(new BorderLayout(10, 10));
       add(inputPanel, BorderLayout.NORTH);
       add(buttonPanel, BorderLayout.CENTER);
-      add(scrollPane, BorderLayout.SOUTH);
    }
 
    private void addEventListeners() {
@@ -111,14 +106,16 @@ public class AvailabilityCheckForm extends JFrame {
    }
 
    private void handleCheckAvailability() {
-      resultsArea.setText("Checking availability...");
+      JOptionPane.showMessageDialog(this, "Verificando disponibilidad...", "Información",
+            JOptionPane.INFORMATION_MESSAGE);
 
       Date selectedCheckInUtilDate = (Date) checkInDatePicker.getModel().getValue();
       Date selectedCheckOutUtilDate = (Date) checkOutDatePicker.getModel().getValue();
       RoomType selectedRoomType = (RoomType) roomTypeComboBox.getSelectedItem();
 
       if (selectedCheckInUtilDate == null || selectedCheckOutUtilDate == null) {
-         resultsArea.setText("Please select both check-in and check-out dates.");
+         JOptionPane.showMessageDialog(this, "Por favor, seleccione ambas fechas, de entrada y salida.",
+               "Error de Validación", JOptionPane.ERROR_MESSAGE);
          return;
       }
 
@@ -126,13 +123,15 @@ public class AvailabilityCheckForm extends JFrame {
       LocalDate checkOutLocalDate = selectedCheckOutUtilDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
 
       if (checkOutLocalDate.isBefore(checkInLocalDate) || checkOutLocalDate.isEqual(checkInLocalDate)) {
-         resultsArea.setText("Check-out date must be after check-in date.");
+         JOptionPane.showMessageDialog(this, "La fecha de salida debe ser posterior a la fecha de entrada.",
+               "Error de Validación", JOptionPane.ERROR_MESSAGE);
          return;
       }
 
       try {
          if (this.rabbitTemplate == null) {
-            resultsArea.setText("Error: RabbitMQ connection not available.");
+            JOptionPane.showMessageDialog(this, "Error: Conexión con RabbitMQ no disponible.", "Error de Conexión",
+                  JOptionPane.ERROR_MESSAGE);
             return;
          }
          AvailabilityRequestDTO requestDTO = new AvailabilityRequestDTO(
@@ -143,12 +142,18 @@ public class AvailabilityCheckForm extends JFrame {
          rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_DISPONIBILIDAD,
                RabbitMQConfig.ROUTING_KEY_VERIFICAR_DISPONIBILIDAD,
                requestDTO);
-         System.out.println("UI Form: Data sent to RabbitMQ (Exchange: " + RabbitMQConfig.EXCHANGE_DISPONIBILIDAD
-               + ", RoutingKey: " + RabbitMQConfig.ROUTING_KEY_VERIFICAR_DISPONIBILIDAD + ") -> " + requestDTO);
-         resultsArea.setText("Availability check request sent. Waiting for results...");
+         System.out
+               .println(
+                     "Formulario UI: Datos enviados a RabbitMQ (Intercambio: " + RabbitMQConfig.EXCHANGE_DISPONIBILIDAD
+                           + ", Clave de Enrutamiento: " + RabbitMQConfig.ROUTING_KEY_VERIFICAR_DISPONIBILIDAD + ") -> "
+                           + requestDTO);
+         JOptionPane.showMessageDialog(this, "Solicitud de disponibilidad enviada. Esperando resultados...",
+               "Información", JOptionPane.INFORMATION_MESSAGE);
       } catch (Exception ex) {
-         System.err.println("AvailabilityCheckForm: Error sending initial request DTO to RabbitMQ: " + ex.getMessage());
-         resultsArea.setText("Error sending availability request. Please check logs.");
+         System.err.println(
+               "AvailabilityCheckForm: Error al enviar DTO de solicitud inicial a RabbitMQ: " + ex.getMessage());
+         JOptionPane.showMessageDialog(this, "Error al enviar solicitud de disponibilidad. Por favor, revise los logs.",
+               "Error", JOptionPane.ERROR_MESSAGE);
       }
    }
 
@@ -173,10 +178,5 @@ public class AvailabilityCheckForm extends JFrame {
 
    public static void main(String[] args) {
       SwingUtilities.invokeLater(() -> new AvailabilityCheckForm(null, null).setVisible(true));
-   }
-
-   // Add a getter for the results area
-   public JTextArea getResultsArea() {
-      return resultsArea;
    }
 }

@@ -2,30 +2,33 @@ package com.ucentral.rabbitmq_app;
 
 import com.ucentral.rabbitmq_app.dto.RoomAvailableEventData;
 import com.ucentral.rabbitmq_app.dto.RoomNotAvailableEventData;
+import com.ucentral.rabbitmq_app.events.CleaningTaskUpdatedEvent;
+import com.ucentral.rabbitmq_app.events.NewCleaningTaskEvent;
 import com.ucentral.rabbitmq_app.services.AvailabilityService;
+import com.ucentral.rabbitmq_app.services.CleaningService;
 import com.ucentral.rabbitmq_app.ui.AvailabilityCheckForm;
 import com.ucentral.rabbitmq_app.ui.BookingConfirmationForm;
+import com.ucentral.rabbitmq_app.ui.CleaningServiceUI;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.EnableAsync;
 
 import javax.swing.*;
-import java.awt.*;
 
-// @EnableAsync // Consider adding if event listeners might block
 @SpringBootApplication
 public class RabbitmqAppApplication {
 
 	private AvailabilityCheckForm mainForm;
+	private CleaningServiceUI cleaningForm;
 	private final RabbitTemplate rabbitTemplate;
+	private final CleaningService cleaningService;
 
-	public RabbitmqAppApplication(RabbitTemplate rabbitTemplate) {
+	public RabbitmqAppApplication(RabbitTemplate rabbitTemplate, CleaningService cleaningService) {
 		this.rabbitTemplate = rabbitTemplate;
+		this.cleaningService = cleaningService;
 	}
 
 	public static void main(String[] args) {
@@ -36,11 +39,15 @@ public class RabbitmqAppApplication {
 
 	@Bean
 	// Re-inject RabbitTemplate here
-	public CommandLineRunner launchSwingUI(AvailabilityService availabilityService, RabbitTemplate rabbitTemplateCL) {
+	public CommandLineRunner launchSwingUIs(AvailabilityService availabilityService, RabbitTemplate rabbitTemplateCL) {
 		return args -> {
 			SwingUtilities.invokeLater(() -> {
 				mainForm = new AvailabilityCheckForm(availabilityService, rabbitTemplateCL);
 				mainForm.setVisible(true);
+
+				// Launch Cleaning Service UI
+				cleaningForm = new CleaningServiceUI(this.cleaningService);
+				cleaningForm.setVisible(true);
 			});
 		};
 	}
@@ -48,7 +55,7 @@ public class RabbitmqAppApplication {
 	// Event Listener to handle RoomAvailableEvent
 	@EventListener
 	public void handleRoomAvailable(RoomAvailableEventData eventData) {
-		System.out.println("Application Event Listener: Received RoomAvailableEvent: " + eventData);
+		System.out.println("Listener de Eventos de Aplicación: RoomAvailableEvent recibido: " + eventData);
 		SwingUtilities.invokeLater(() -> {
 			// Use the class-level rabbitTemplate for the booking form
 			BookingConfirmationForm bookingForm = new BookingConfirmationForm(mainForm, eventData, this.rabbitTemplate);
@@ -59,27 +66,33 @@ public class RabbitmqAppApplication {
 	// New Event Listener for Room Not Available
 	@EventListener
 	public void handleRoomNotAvailable(RoomNotAvailableEventData eventData) {
-		System.out.println("Application Event Listener: Received RoomNotAvailableEvent: " + eventData);
+		System.out.println("Listener de Eventos de Aplicación: RoomNotAvailableEvent recibido: " + eventData);
 		SwingUtilities.invokeLater(() -> {
 			String message = String.format(
-					"Sorry, no rooms of type '%s' are available between %s and %s.",
+					"Lo sentimos, no hay habitaciones de tipo '%s' disponibles entre %s y %s.",
 					eventData.getRoomType(),
 					eventData.getCheckInDate(),
 					eventData.getCheckOutDate());
 			JOptionPane.showMessageDialog(mainForm, // Parent component
 					message,
-					"No Availability",
+					"Sin Disponibilidad",
 					JOptionPane.INFORMATION_MESSAGE);
-			// Also update the main form's text area
-			if (mainForm != null) {
-				// Assuming AvailabilityCheckForm has a method like this:
-				// mainForm.updateResultArea(message);
-				// Or access it directly if needed and safe
-				JTextArea resultsArea = mainForm.getResultsArea(); // Need a getter for this
-				if (resultsArea != null) {
-					resultsArea.setText(message);
-				}
-			}
 		});
+	}
+
+	@EventListener
+	public void handleNewCleaningTask(NewCleaningTaskEvent event) {
+		System.out.println("Listener de Eventos de Aplicación: NewCleaningTaskEvent recibido: " + event.getTask());
+		if (cleaningForm != null) {
+			cleaningForm.handleNewTask(event.getTask());
+		}
+	}
+
+	@EventListener
+	public void handleCleaningTaskUpdated(CleaningTaskUpdatedEvent event) {
+		System.out.println("Listener de Eventos de Aplicación: CleaningTaskUpdatedEvent recibido: " + event.getTask());
+		if (cleaningForm != null) {
+			cleaningForm.handleTaskUpdated(event.getTask());
+		}
 	}
 }

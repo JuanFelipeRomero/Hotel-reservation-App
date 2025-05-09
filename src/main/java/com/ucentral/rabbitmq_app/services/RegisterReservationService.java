@@ -23,93 +23,78 @@ import java.util.Optional;
 @Service
 public class RegisterReservationService {
 
-   private static final Logger log = LoggerFactory.getLogger(RegisterReservationService.class);
-   private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE; // yyyy-MM-dd
+      private static final Logger log = LoggerFactory.getLogger(RegisterReservationService.class);
+      private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
 
-   private final ReservationRepository reservationRepository;
-   private final RoomRepository roomRepository;
-   private final RabbitTemplate rabbitTemplate;
+      private final ReservationRepository reservationRepository;
+      private final RoomRepository roomRepository;
+      private final RabbitTemplate rabbitTemplate;
 
-   @Autowired
-   public RegisterReservationService(ReservationRepository reservationRepository, RoomRepository roomRepository,
-         RabbitTemplate rabbitTemplate) {
-      this.reservationRepository = reservationRepository;
-      this.roomRepository = roomRepository;
-      this.rabbitTemplate = rabbitTemplate;
-   }
-
-   @RabbitListener(queues = RabbitMQConfig.QUEUE_PROCESSED_DETAILS)
-   @Transactional // Make the operation transactional
-   public void handleReservationRequest(@Payload FinalBookingDetailsDTO bookingDetails) {
-      log.info("Register Service Listener: Received final booking details from RabbitMQ (Queue: {}) -> {}",
-            RabbitMQConfig.QUEUE_PROCESSED_DETAILS, bookingDetails);
-
-      try {
-         // 1. Parse dates
-         LocalDate checkInDate = LocalDate.parse(bookingDetails.getCheckInDate(), DATE_FORMATTER);
-         LocalDate checkOutDate = LocalDate.parse(bookingDetails.getCheckOutDate(), DATE_FORMATTER);
-
-         // 2. Fetch the Room entity
-         Optional<Room> roomOptional = roomRepository.findById(bookingDetails.getRoomId());
-         if (roomOptional.isEmpty()) {
-            log.error(
-                  "Register Service Listener: Could not find Room with ID {} specified in booking details. Aborting reservation.",
-                  bookingDetails.getRoomId());
-            // TODO: Handle error - maybe send to DLQ or notify originator
-            return;
-         }
-         Room room = roomOptional.get();
-
-         // Optional: Double check room details match DTO? (e.g., room number, price)
-         // if (!room.getRoomNumber().equals(bookingDetails.getRoomNumber())) { ... log
-         // warning ... }
-
-         // 3. Create Reservation entity
-         Reservation newReservation = new Reservation(
-               room,
-               bookingDetails.getGuestName(),
-               bookingDetails.getGuestId(),
-               bookingDetails.getGuestEmail(),
-               checkInDate,
-               checkOutDate);
-
-         // 4. Save the reservation
-         Reservation savedReservation = reservationRepository.save(newReservation);
-         log.info("Register Service Listener: Successfully saved new reservation with ID: {}",
-               savedReservation.getId());
-
-         // After successful save, publish to fanout exchange
-         try {
-            // Sending the saved Reservation entity itself. Ensure it's serializable.
-            rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_RESERVA_CONFIRMADA,
-                  "", // Routing key is ignored by Fanout exchanges
-                  savedReservation);
-            log.info("Register Service Listener: Published confirmed reservation event to Exchange '{}': {}",
-                  RabbitMQConfig.EXCHANGE_RESERVA_CONFIRMADA, savedReservation);
-         } catch (Exception e) {
-            log.error(
-                  "Register Service Listener: Error publishing confirmed reservation event for Reservation ID {}: {}",
-                  savedReservation.getId(), e.getMessage(), e);
-            // The original reservation is saved, but event publishing failed.
-            // Consider compensation logic or more robust event publishing (e.g.,
-            // transactional outbox pattern)
-         }
-
-      } catch (DateTimeParseException e) {
-         log.error("Register Service Listener: Error parsing dates from booking details DTO: {}. Message: {}",
-               bookingDetails, e.getMessage());
-         // TODO: Handle error - DLQ?
-      } catch (IllegalArgumentException e) {
-         log.error("Register Service Listener: Error processing booking details DTO: {}. Message: {}", bookingDetails,
-               e.getMessage());
-         // TODO: Handle error - DLQ?
-      } catch (Exception e) { // Catch broader exceptions during DB interaction
-         log.error(
-               "Register Service Listener: Unexpected error saving reservation for booking details DTO: {}. Error: {}",
-               bookingDetails, e.getMessage(), e);
-         // TODO: Handle error - DLQ?
-         // Consider re-throwing a specific runtime exception if transaction should
-         // definitely rollback
+      @Autowired
+      public RegisterReservationService(ReservationRepository reservationRepository, RoomRepository roomRepository,
+                  RabbitTemplate rabbitTemplate) {
+            this.reservationRepository = reservationRepository;
+            this.roomRepository = roomRepository;
+            this.rabbitTemplate = rabbitTemplate;
       }
-   }
+
+      @RabbitListener(queues = RabbitMQConfig.QUEUE_PROCESSED_DETAILS)
+      @Transactional
+      public void handleReservationRequest(@Payload FinalBookingDetailsDTO bookingDetails) {
+            log.info("Servicio de Registro Listener: Detalles finales de reserva recibidos de RabbitMQ (Cola: {}) -> {}",
+                        RabbitMQConfig.QUEUE_PROCESSED_DETAILS, bookingDetails);
+
+            try {
+                  // 1. Parse dates
+                  LocalDate checkInDate = LocalDate.parse(bookingDetails.getCheckInDate(), DATE_FORMATTER);
+                  LocalDate checkOutDate = LocalDate.parse(bookingDetails.getCheckOutDate(), DATE_FORMATTER);
+
+                  // 2. Fetch the Room entity
+                  Optional<Room> roomOptional = roomRepository.findById(bookingDetails.getRoomId());
+                  if (roomOptional.isEmpty()) {
+                        log.error(
+                                    "No se pudo encontrar Habitación con ID {} especificado en detalles de reserva. Abortando reserva.",
+                                    bookingDetails.getRoomId());
+                        return;
+                  }
+                  Room room = roomOptional.get();
+
+                  Reservation newReservation = new Reservation(
+                              room,
+                              bookingDetails.getGuestName(),
+                              bookingDetails.getGuestId(),
+                              bookingDetails.getGuestEmail(),
+                              checkInDate,
+                              checkOutDate);
+
+                  // 4. Save the reservation
+                  Reservation savedReservation = reservationRepository.save(newReservation);
+                  log.info("Nueva reserva guardada exitosamente con ID: {}",
+                              savedReservation.getId());
+
+                  try {
+                        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_RESERVA_CONFIRMADA,
+                                    "",
+                                    savedReservation);
+                        log.info("Evento de reserva confirmada publicado a Intercambio '{}': {}",
+                                    RabbitMQConfig.EXCHANGE_RESERVA_CONFIRMADA, savedReservation);
+                  } catch (Exception e) {
+                        log.error(
+                                    "Error al publicar evento de reserva confirmada para Reserva ID {}: {}",
+                                    savedReservation.getId(), e.getMessage(), e);
+                  }
+
+            } catch (DateTimeParseException e) {
+                  log.error("Error al parsear fechas desde DTO de detalles de reserva: {}. Mensaje: {}",
+                              bookingDetails, e.getMessage());
+            } catch (IllegalArgumentException e) {
+                  log.error("Error al procesar DTO de detalles de reserva: {}. Mensaje: {}",
+                              bookingDetails,
+                              e.getMessage());
+            } catch (Exception e) {
+                  log.error(
+                              "Error inesperado al guardar reserva para DTO de detalles de reserva: {}. Error: {}",
+                              bookingDetails, e.getMessage(), e);
+            }
+      }
 }

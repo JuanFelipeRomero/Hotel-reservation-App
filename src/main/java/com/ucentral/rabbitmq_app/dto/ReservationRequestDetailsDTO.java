@@ -3,14 +3,11 @@ package com.ucentral.rabbitmq_app.dto;
 public class ReservationRequestDetailsDTO {
    private Long roomId;
    private String roomNumber;
-   // private String roomType; // roomType is known by the consumer of original
-   // request if needed
-   private Double pricePerNight; // Price at the time of availability check
-   private String checkInDate; // Expecting yyyy-MM-dd format
-   private String checkOutDate; // Expecting yyyy-MM-dd format
-   private String guestName; // Placeholder for now
+   private Double pricePerNight;
+   private String checkInDate;
+   private String checkOutDate;
+   private String guestName;
 
-   // No-arg constructor for Jackson
    public ReservationRequestDetailsDTO() {
    }
 
@@ -24,7 +21,6 @@ public class ReservationRequestDetailsDTO {
       this.guestName = guestName;
    }
 
-   // Getters and Setters
    public Long getRoomId() {
       return roomId;
    }

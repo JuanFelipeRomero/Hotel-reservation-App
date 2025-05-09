@@ -1,9 +1,9 @@
 package com.ucentral.rabbitmq_app.services;
 
-import com.ucentral.rabbitmq_app.RabbitMQConfig; // For queue name constant
+import com.ucentral.rabbitmq_app.RabbitMQConfig;
 import com.ucentral.rabbitmq_app.dto.AvailabilityRequestDTO;
-import com.ucentral.rabbitmq_app.dto.RoomAvailableEventData; // Import for event data
-import com.ucentral.rabbitmq_app.dto.RoomNotAvailableEventData; // Added import
+import com.ucentral.rabbitmq_app.dto.RoomAvailableEventData;
+import com.ucentral.rabbitmq_app.dto.RoomNotAvailableEventData;
 import com.ucentral.rabbitmq_app.model.Reservation;
 import com.ucentral.rabbitmq_app.model.Room;
 import com.ucentral.rabbitmq_app.model.RoomType;
@@ -11,7 +11,7 @@ import com.ucentral.rabbitmq_app.repository.ReservationRepository;
 import com.ucentral.rabbitmq_app.repository.RoomRepository;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher; // For publishing events
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 
@@ -26,7 +26,7 @@ public class AvailabilityService {
 
    private final RoomRepository roomRepository;
    private final ReservationRepository reservationRepository;
-   private final ApplicationEventPublisher eventPublisher; // Added
+   private final ApplicationEventPublisher eventPublisher;
    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
    @Autowired
@@ -34,12 +34,12 @@ public class AvailabilityService {
          ApplicationEventPublisher eventPublisher) {
       this.roomRepository = roomRepository;
       this.reservationRepository = reservationRepository;
-      this.eventPublisher = eventPublisher; // Added
+      this.eventPublisher = eventPublisher;
    }
 
    @RabbitListener(queues = RabbitMQConfig.QUEUE_RESERVACIONES_PARA_DISPONIBILIDAD)
    public void handleAvailabilityRequest(@Payload AvailabilityRequestDTO requestDTO) {
-      System.out.println("Service Listener: Data received from RabbitMQ (Queue: "
+      System.out.println("Datos recibidos de RabbitMQ (Cola: "
             + RabbitMQConfig.QUEUE_RESERVACIONES_PARA_DISPONIBILIDAD + ") -> " + requestDTO);
 
       LocalDate checkInDate;
@@ -52,19 +52,20 @@ public class AvailabilityService {
          checkOutDate = LocalDate.parse(requestDTO.getCheckOutDate(), DATE_FORMATTER);
          roomType = RoomType.valueOf(requestDTO.getRoomType().toUpperCase());
       } catch (DateTimeParseException | IllegalArgumentException e) {
-         System.err.println("Service Listener: Error parsing DTO: " + e.getMessage());
+         System.err.println("Servicio Listener: Error al parsear DTO: " + e.getMessage());
          return;
       }
 
-      String availabilityMessage = "No rooms of type " + roomType + " are available for the selected dates.";
-      boolean wasRoomAvailable = false; // Flag to track if we found one
+      String availabilityMessage = "No hay habitaciones de tipo " + roomType
+            + " disponibles para las fechas seleccionadas.";
+      boolean wasRoomAvailable = false;
 
       List<Room> roomsOfType = roomRepository.findAll().stream()
             .filter(room -> room.getRoomType() == roomType)
             .collect(Collectors.toList());
 
       if (roomsOfType.isEmpty()) {
-         availabilityMessage = "No rooms of type " + roomType + " exist in the hotel.";
+         availabilityMessage = "No existen habitaciones de tipo " + roomType + " en el hotel.";
       } else {
          for (Room room : roomsOfType) {
             List<Reservation> conflictingReservations = reservationRepository.findAll().stream()
@@ -74,20 +75,19 @@ public class AvailabilityService {
                   .collect(Collectors.toList());
 
             if (conflictingReservations.isEmpty()) {
-               availableRoom = room; // Capture the available room
-               wasRoomAvailable = true; // Set flag
+               availableRoom = room;
+               wasRoomAvailable = true;
                availabilityMessage = String.format(
-                     "Room Available! Number: %s, Type: %s, Price: $%.2f For dates: %s to %s",
+                     "¡Habitación Disponible! Número: %s, Tipo: %s, Precio: $%.2f Para fechas: %s a %s",
                      room.getRoomNumber(), room.getRoomType(), room.getPricePerNight(),
                      checkInDate.format(DATE_FORMATTER), checkOutDate.format(DATE_FORMATTER));
                break;
             }
          }
       }
-      System.out.println("AvailabilityService (Listener): Validation Result -> " + availabilityMessage);
+      System.out.println("Resultado de Validación -> " + availabilityMessage);
 
       if (wasRoomAvailable && availableRoom != null) {
-         // Publish an event with the available room details
          RoomAvailableEventData eventData = new RoomAvailableEventData(
                availableRoom.getId(),
                availableRoom.getRoomNumber(),
@@ -95,39 +95,31 @@ public class AvailabilityService {
                availableRoom.getPricePerNight(),
                checkInDate.format(DATE_FORMATTER),
                checkOutDate.format(DATE_FORMATTER));
-         eventPublisher.publishEvent(eventData); // Publishing the data directly as the event object
-         System.out.println("Service Listener: Published RoomAvailableEvent with data: " + eventData);
+         eventPublisher.publishEvent(eventData);
+         System.out.println("evento de habitacion disponible publicado con datos: " + eventData);
       } else {
-         // Publish an event indicating no room was available
          RoomNotAvailableEventData notAvailableEventData = new RoomNotAvailableEventData(
                checkInDate.format(DATE_FORMATTER),
                checkOutDate.format(DATE_FORMATTER),
                roomType);
          eventPublisher.publishEvent(notAvailableEventData);
-         System.out.println("Service Listener: No available room found, published RoomNotAvailableEvent.");
+         System.out
+               .println("No se encontró habitación disponible, RoomNotAvailableEvent publicado.");
       }
 
-      // Original detailed logging for console (can be removed or kept)
       StringBuilder resultBuilder = new StringBuilder(availabilityMessage);
       List<Reservation> reservationsForType = reservationRepository.findByRoom_RoomType(roomType);
-      resultBuilder.append("\n\n--- Existing Reservations for Room Type: ").append(roomType).append(" ---");
+      resultBuilder.append("\n\n--- Reservas Existentes para Tipo de Habitación: ").append(roomType).append(" ---");
       if (reservationsForType.isEmpty()) {
-         resultBuilder.append("\nNo reservations found for this room type.");
+         resultBuilder.append("\nNo se encontraron reservas para este tipo de habitación.");
       } else {
          for (Reservation res : reservationsForType) {
-            resultBuilder.append(String.format("\nGuest: %s, Room: %s, Dates: %s to %s",
+            resultBuilder.append(String.format("\nHuésped: %s, Habitación: %s, Fechas: %s a %s",
                   res.getGuestName(), res.getRoom().getRoomNumber(),
                   res.getCheckInDate().format(DATE_FORMATTER), res.getCheckOutDate().format(DATE_FORMATTER)));
          }
       }
-      System.out.println("AvailabilityService (Listener): Detailed Info Log ->\n" + resultBuilder.toString());
+      System.out.println(
+            "Registro de Información Detallada ->\n" + resultBuilder.toString());
    }
-
-   /*
-    * // Commenting out the old synchronous method
-    * public String checkAvailability(LocalDate checkInDate, LocalDate
-    * checkOutDate, RoomType roomType) {
-    * // ... old logic ...
-    * }
-    */
 }

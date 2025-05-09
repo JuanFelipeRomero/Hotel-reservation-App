@@ -2,11 +2,10 @@ package com.ucentral.rabbitmq_app.dto;
 
 import com.ucentral.rabbitmq_app.model.RoomType;
 
-// Event data published when no room is available for the request
 public class RoomNotAvailableEventData {
-   private String checkInDate; // Original requested date
-   private String checkOutDate; // Original requested date
-   private RoomType roomType; // Original requested type
+   private String checkInDate;
+   private String checkOutDate;
+   private RoomType roomType;
 
    public RoomNotAvailableEventData(String checkInDate, String checkOutDate, RoomType roomType) {
       this.checkInDate = checkInDate;

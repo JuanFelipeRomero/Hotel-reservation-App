@@ -27,7 +27,6 @@ public class Room {
    @Column(name = "price_per_night", nullable = false)
    private int pricePerNight;
 
-   // Constructors
    public Room() {
    }
 
@@ -70,7 +69,6 @@ public class Room {
       this.pricePerNight = pricePerNight;
    }
 
-   // toString() method (optional, but useful for logging/debugging)
    @Override
    public String toString() {
       return "Room{" +

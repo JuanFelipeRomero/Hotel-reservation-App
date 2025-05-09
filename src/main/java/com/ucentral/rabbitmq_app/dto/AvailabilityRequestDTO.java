@@ -1,18 +1,10 @@
 package com.ucentral.rabbitmq_app.dto;
 
-// No need for Lombok or explicit getters/setters if using Jackson for serialization
-// and fields are public or if record is used (Java 14+).
-// For broader compatibility and typical DTO patterns, getters/setters are often included.
-// Using a simple class with public fields for brevity with Jackson.
-// Or, for better encapsulation with Jackson, use private fields and public getters/setters.
-// Let's use private fields and getters/setters for good practice.
-
 public class AvailabilityRequestDTO {
-   private String checkInDate; // Expecting yyyy-MM-dd format
-   private String checkOutDate; // Expecting yyyy-MM-dd format
-   private String roomType; // e.g., "SENCILLA", "DOBLE", "SUITE"
+   private String checkInDate; // yyyy-MM-dd format
+   private String checkOutDate; // yyyy-MM-dd format
+   private String roomType; // "SENCILLA", "DOBLE", "SUITE"
 
-   // Jackson needs a no-arg constructor for deserialization
    public AvailabilityRequestDTO() {
    }
 
