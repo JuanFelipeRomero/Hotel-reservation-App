@@ -28,6 +28,9 @@ public class Reservation { // Consider renaming class to Reservation
    @Column(name = "guest_id", nullable = false)
    private String guestId;
 
+   @Column(name = "guest_email") // Nullable for now, can be made false later
+   private String guestEmail;
+
    @Column(name = "check_in_date", nullable = false)
    private LocalDate checkInDate;
 
@@ -38,10 +41,12 @@ public class Reservation { // Consider renaming class to Reservation
    public Reservation() {
    }
 
-   public Reservation(Room room, String guestName, String guestId, LocalDate checkInDate, LocalDate checkOutDate) {
+   public Reservation(Room room, String guestName, String guestId, String guestEmail, LocalDate checkInDate,
+         LocalDate checkOutDate) {
       this.room = room;
       this.guestName = guestName;
       this.guestId = guestId;
+      this.guestEmail = guestEmail;
       this.checkInDate = checkInDate;
       this.checkOutDate = checkOutDate;
    }
@@ -79,6 +84,14 @@ public class Reservation { // Consider renaming class to Reservation
       this.guestId = guestId;
    }
 
+   public String getGuestEmail() {
+      return guestEmail;
+   }
+
+   public void setGuestEmail(String guestEmail) {
+      this.guestEmail = guestEmail;
+   }
+
    public LocalDate getCheckInDate() {
       return checkInDate;
    }
@@ -103,6 +116,7 @@ public class Reservation { // Consider renaming class to Reservation
             ", room=" + (room != null ? room.getId() : null) +
             ", guestName='" + guestName + "'" +
             ", guestId='" + guestId + "'" +
+            ", guestEmail='" + guestEmail + "'" +
             ", checkInDate=" + checkInDate +
             ", checkOutDate=" + checkOutDate +
             '}';

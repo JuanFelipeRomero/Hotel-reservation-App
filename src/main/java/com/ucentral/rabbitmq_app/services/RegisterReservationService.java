@@ -9,6 +9,7 @@ import com.ucentral.rabbitmq_app.repository.RoomRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
@@ -27,11 +28,14 @@ public class RegisterReservationService {
 
    private final ReservationRepository reservationRepository;
    private final RoomRepository roomRepository;
+   private final RabbitTemplate rabbitTemplate;
 
    @Autowired
-   public RegisterReservationService(ReservationRepository reservationRepository, RoomRepository roomRepository) {
+   public RegisterReservationService(ReservationRepository reservationRepository, RoomRepository roomRepository,
+         RabbitTemplate rabbitTemplate) {
       this.reservationRepository = reservationRepository;
       this.roomRepository = roomRepository;
+      this.rabbitTemplate = rabbitTemplate;
    }
 
    @RabbitListener(queues = RabbitMQConfig.QUEUE_PROCESSED_DETAILS)
@@ -65,6 +69,7 @@ public class RegisterReservationService {
                room,
                bookingDetails.getGuestName(),
                bookingDetails.getGuestId(),
+               bookingDetails.getGuestEmail(),
                checkInDate,
                checkOutDate);
 
@@ -72,6 +77,23 @@ public class RegisterReservationService {
          Reservation savedReservation = reservationRepository.save(newReservation);
          log.info("Register Service Listener: Successfully saved new reservation with ID: {}",
                savedReservation.getId());
+
+         // After successful save, publish to fanout exchange
+         try {
+            // Sending the saved Reservation entity itself. Ensure it's serializable.
+            rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_RESERVA_CONFIRMADA,
+                  "", // Routing key is ignored by Fanout exchanges
+                  savedReservation);
+            log.info("Register Service Listener: Published confirmed reservation event to Exchange '{}': {}",
+                  RabbitMQConfig.EXCHANGE_RESERVA_CONFIRMADA, savedReservation);
+         } catch (Exception e) {
+            log.error(
+                  "Register Service Listener: Error publishing confirmed reservation event for Reservation ID {}: {}",
+                  savedReservation.getId(), e.getMessage(), e);
+            // The original reservation is saved, but event publishing failed.
+            // Consider compensation logic or more robust event publishing (e.g.,
+            // transactional outbox pattern)
+         }
 
       } catch (DateTimeParseException e) {
          log.error("Register Service Listener: Error parsing dates from booking details DTO: {}. Message: {}",

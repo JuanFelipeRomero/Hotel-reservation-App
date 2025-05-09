@@ -14,6 +14,7 @@ public class FinalBookingDetailsDTO {
    // Details from the new booking confirmation form
    private String guestName;
    private String guestId;
+   private String guestEmail;
 
    // No-arg constructor for Jackson
    public FinalBookingDetailsDTO() {
@@ -21,7 +22,7 @@ public class FinalBookingDetailsDTO {
 
    public FinalBookingDetailsDTO(Long roomId, String roomNumber, RoomType roomType, Double pricePerNight,
          String checkInDate, String checkOutDate,
-         String guestName, String guestId) {
+         String guestName, String guestId, String guestEmail) {
       this.roomId = roomId;
       this.roomNumber = roomNumber;
       this.roomType = roomType;
@@ -30,6 +31,7 @@ public class FinalBookingDetailsDTO {
       this.checkOutDate = checkOutDate;
       this.guestName = guestName;
       this.guestId = guestId;
+      this.guestEmail = guestEmail;
    }
 
    // Getters and Setters
@@ -97,6 +99,14 @@ public class FinalBookingDetailsDTO {
       this.guestId = guestId;
    }
 
+   public String getGuestEmail() {
+      return guestEmail;
+   }
+
+   public void setGuestEmail(String guestEmail) {
+      this.guestEmail = guestEmail;
+   }
+
    @Override
    public String toString() {
       return "FinalBookingDetailsDTO{" +
@@ -108,6 +118,7 @@ public class FinalBookingDetailsDTO {
             ", checkOutDate='" + checkOutDate + '\'' +
             ", guestName='" + guestName + '\'' +
             ", guestId='" + guestId + '\'' +
+            ", guestEmail='" + guestEmail + '\'' +
             '}';
    }
 }

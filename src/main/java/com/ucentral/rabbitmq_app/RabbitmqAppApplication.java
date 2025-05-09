@@ -29,10 +29,8 @@ public class RabbitmqAppApplication {
 	}
 
 	public static void main(String[] args) {
-		// SpringApplication.run(RabbitmqAppApplication.class, args);
-		// Modified to run in a non-headless environment for Swing UI
 		new SpringApplicationBuilder(RabbitmqAppApplication.class)
-				.headless(false) // Allow AWT/Swing
+				.headless(false)
 				.run(args);
 	}
 
@@ -40,9 +38,7 @@ public class RabbitmqAppApplication {
 	// Re-inject RabbitTemplate here
 	public CommandLineRunner launchSwingUI(AvailabilityService availabilityService, RabbitTemplate rabbitTemplateCL) {
 		return args -> {
-			// Ensure UI updates are on the Event Dispatch Thread (EDT)
 			SwingUtilities.invokeLater(() -> {
-				// Pass the actual RabbitTemplate instance needed by the form
 				mainForm = new AvailabilityCheckForm(availabilityService, rabbitTemplateCL);
 				mainForm.setVisible(true);
 			});
@@ -53,7 +49,6 @@ public class RabbitmqAppApplication {
 	@EventListener
 	public void handleRoomAvailable(RoomAvailableEventData eventData) {
 		System.out.println("Application Event Listener: Received RoomAvailableEvent: " + eventData);
-		// Ensure UI update happens on the EDT
 		SwingUtilities.invokeLater(() -> {
 			// Use the class-level rabbitTemplate for the booking form
 			BookingConfirmationForm bookingForm = new BookingConfirmationForm(mainForm, eventData, this.rabbitTemplate);
@@ -65,7 +60,6 @@ public class RabbitmqAppApplication {
 	@EventListener
 	public void handleRoomNotAvailable(RoomNotAvailableEventData eventData) {
 		System.out.println("Application Event Listener: Received RoomNotAvailableEvent: " + eventData);
-		// Ensure UI update happens on the EDT
 		SwingUtilities.invokeLater(() -> {
 			String message = String.format(
 					"Sorry, no rooms of type '%s' are available between %s and %s.",

@@ -34,3 +34,6 @@ build/
 
 ##Cursor##
 .cursor
+
+##project##
+src\main\resources\application.properties

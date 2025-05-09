@@ -17,6 +17,7 @@ public class BookingConfirmationForm extends JDialog { // Use JDialog for second
 
    private JTextField guestNameField;
    private JTextField guestIdField;
+   private JTextField guestEmailField;
    private JButton confirmButton;
    private JTextArea detailsArea;
 
@@ -27,7 +28,7 @@ public class BookingConfirmationForm extends JDialog { // Use JDialog for second
       this.availableRoomData = availableRoomData;
       this.rabbitTemplate = rabbitTemplate;
 
-      setSize(450, 350);
+      setSize(450, 400);
       setLocationRelativeTo(owner); // Center relative to owner
       setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE); // Close only this dialog
 
@@ -45,6 +46,7 @@ public class BookingConfirmationForm extends JDialog { // Use JDialog for second
 
       guestNameField = new JTextField(20);
       guestIdField = new JTextField(20);
+      guestEmailField = new JTextField(20);
       confirmButton = new JButton("Confirm Booking");
    }
 
@@ -68,6 +70,7 @@ public class BookingConfirmationForm extends JDialog { // Use JDialog for second
       GridBagConstraints gbc = new GridBagConstraints();
       gbc.insets = new Insets(5, 5, 5, 5);
       gbc.anchor = GridBagConstraints.WEST;
+      gbc.fill = GridBagConstraints.HORIZONTAL;
 
       gbc.gridx = 0;
       gbc.gridy = 0;
@@ -82,6 +85,13 @@ public class BookingConfirmationForm extends JDialog { // Use JDialog for second
       gbc.gridx = 1;
       gbc.gridy = 1;
       formPanel.add(guestIdField, gbc);
+
+      gbc.gridx = 0;
+      gbc.gridy = 2;
+      formPanel.add(new JLabel("Guest Email:"), gbc);
+      gbc.gridx = 1;
+      gbc.gridy = 2;
+      formPanel.add(guestEmailField, gbc);
 
       JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
       buttonPanel.add(confirmButton);
@@ -104,9 +114,10 @@ public class BookingConfirmationForm extends JDialog { // Use JDialog for second
    private void handleConfirmBooking() {
       String guestName = guestNameField.getText();
       String guestId = guestIdField.getText();
+      String guestEmail = guestEmailField.getText();
 
-      if (guestName.trim().isEmpty() || guestId.trim().isEmpty()) {
-         JOptionPane.showMessageDialog(this, "Please enter both Guest Name and ID.", "Input Required",
+      if (guestName.trim().isEmpty() || guestId.trim().isEmpty() || guestEmail.trim().isEmpty()) {
+         JOptionPane.showMessageDialog(this, "Please enter Guest Name, ID, and Email.", "Input Required",
                JOptionPane.WARNING_MESSAGE);
          return;
       }
@@ -120,7 +131,8 @@ public class BookingConfirmationForm extends JDialog { // Use JDialog for second
             availableRoomData.getCheckInDate(),
             availableRoomData.getCheckOutDate(),
             guestName,
-            guestId);
+            guestId,
+            guestEmail);
 
       // Send to RabbitMQ
       try {
