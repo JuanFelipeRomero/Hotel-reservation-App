@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+##Cursor##
+.cursor
+
+##project##
+src\main\resources\application.properties
