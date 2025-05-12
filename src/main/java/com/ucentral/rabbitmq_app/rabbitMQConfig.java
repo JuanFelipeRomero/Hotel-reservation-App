@@ -1,6 +1,8 @@
 package com.ucentral.rabbitmq_app;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
@@ -32,6 +34,15 @@ public class RabbitMQConfig {
    public static final String EXCHANGE_RESERVA_CONFIRMADA = "evento.reserva_confirmada";
    public static final String QUEUE_LIMPIEZA = "cola_limpieza";
    public static final String QUEUE_NOTIFICACIONES = "cola_notificaciones";
+
+   // Cleaning Service Exchange/Queue/Key
+   public static final String EXCHANGE_CLEANING = "direct.cleaning";
+   public static final String QUEUE_CLEANING_TASKS = "cola_cleaning_tasks";
+   public static final String ROUTING_KEY_NEW_CLEANING_TASK = "new_cleaning_task";
+   public static final String ROUTING_KEY_UPDATE_CLEANING_TASK = "update_cleaning_task";
+
+   // Confirmed Reservation Fanout Exchange and Admin Queue (NEW)
+   public static final String QUEUE_ADMIN = "cola_admin";
 
    @Bean
    public DirectExchange disponibilidadExchange() {
@@ -97,6 +108,35 @@ public class RabbitMQConfig {
       return BindingBuilder.bind(notificacionesQueue).to(reservaConfirmadaExchange);
    }
 
+   // Cleaning Service
+   @Bean
+   public DirectExchange cleaningExchange() {
+      return new DirectExchange(EXCHANGE_CLEANING);
+   }
+
+   @Bean
+   public Queue cleaningTasksQueue() {
+      return new Queue(QUEUE_CLEANING_TASKS, true, false, false);
+   }
+
+   @Bean
+   public Binding bindingCleaningTasks(Queue cleaningTasksQueue, DirectExchange cleaningExchange) {
+      return BindingBuilder.bind(cleaningTasksQueue)
+            .to(cleaningExchange)
+            .with(ROUTING_KEY_NEW_CLEANING_TASK);
+   }
+
+   // Confirmed Reservation Fanout Exchange and Admin Queue (NEW)
+   @Bean
+   public Queue adminQueue() {
+      return new Queue(QUEUE_ADMIN, true, false, false);
+   }
+
+   @Bean
+   public Binding adminBinding(Queue adminQueue, FanoutExchange reservaConfirmadaExchange) {
+      return BindingBuilder.bind(adminQueue).to(reservaConfirmadaExchange);
+   }
+
    // Define el Bean MessageConverter que RabbitTemplate usará
    @Bean
    public MessageConverter jackson2JsonMessageConverter(ObjectMapper objectMapper) {
@@ -110,6 +150,16 @@ public class RabbitMQConfig {
       final RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
       rabbitTemplate.setMessageConverter(messageConverter);
       return rabbitTemplate;
+   }
+
+   // Ensure a shared ObjectMapper bean is available for consistency
+   @Bean
+   public ObjectMapper objectMapper() {
+      ObjectMapper mapper = new ObjectMapper();
+      mapper.registerModule(new JavaTimeModule()); // Register module for Java 8 Date/Time types
+      mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); // Ensure dates are serialized as ISO strings
+      // Add any other necessary ObjectMapper configuration here
+      return mapper;
    }
 
 }
