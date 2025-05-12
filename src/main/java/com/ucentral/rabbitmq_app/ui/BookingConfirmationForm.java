@@ -61,45 +61,59 @@ public class BookingConfirmationForm extends JDialog {
    }
 
    private void layoutComponents() {
+      // Panel principal con padding
+      JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+      mainPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+
+      // Panel para mostrar detalles de la habitación (arriba)
       JPanel detailsPanel = new JPanel(new BorderLayout(5, 5));
       detailsPanel.setBorder(BorderFactory.createTitledBorder("Detalles de la Habitación Disponible"));
       detailsPanel.add(new JScrollPane(detailsArea), BorderLayout.CENTER);
 
+      // Panel para el formulario de información del huésped
       JPanel formPanel = new JPanel(new GridBagLayout());
       formPanel.setBorder(BorderFactory.createTitledBorder("Información del Huésped"));
       GridBagConstraints gbc = new GridBagConstraints();
       gbc.insets = new Insets(5, 5, 5, 5);
       gbc.anchor = GridBagConstraints.WEST;
-      gbc.fill = GridBagConstraints.HORIZONTAL;
 
+      // Labels - Column 0
       gbc.gridx = 0;
       gbc.gridy = 0;
+      gbc.weightx = 0.0; // Labels don't expand horizontally
+      gbc.fill = GridBagConstraints.NONE;
       formPanel.add(new JLabel("Nombre del Huésped:"), gbc);
-      gbc.gridx = 1;
-      gbc.gridy = 0;
-      formPanel.add(guestNameField, gbc);
 
-      gbc.gridx = 0;
       gbc.gridy = 1;
       formPanel.add(new JLabel("Identificacion del Huesped"), gbc);
+
+      gbc.gridy = 2;
+      formPanel.add(new JLabel("Email del Huésped:"), gbc);
+
+      // TextFields - Column 1
       gbc.gridx = 1;
+      gbc.gridy = 0;
+      gbc.weightx = 1.0; // <<< Give this column horizontal weight to expand
+      gbc.fill = GridBagConstraints.HORIZONTAL; // <<< Make fields fill horizontally
+      formPanel.add(guestNameField, gbc);
+
       gbc.gridy = 1;
       formPanel.add(guestIdField, gbc);
 
-      gbc.gridx = 0;
-      gbc.gridy = 2;
-      formPanel.add(new JLabel("Email del Huésped:"), gbc);
-      gbc.gridx = 1;
       gbc.gridy = 2;
       formPanel.add(guestEmailField, gbc);
 
+      // Panel para los botones
       JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
       buttonPanel.add(confirmButton);
 
-      setLayout(new BorderLayout(10, 10));
-      add(detailsPanel, BorderLayout.NORTH);
-      add(formPanel, BorderLayout.CENTER);
-      add(buttonPanel, BorderLayout.SOUTH);
+      // Añadir componentes al panel principal
+      mainPanel.add(detailsPanel, BorderLayout.NORTH);
+      mainPanel.add(formPanel, BorderLayout.CENTER);
+      mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+      // Añadir panel principal al diálogo
+      add(mainPanel, BorderLayout.CENTER);
    }
 
    private void addEventListeners() {

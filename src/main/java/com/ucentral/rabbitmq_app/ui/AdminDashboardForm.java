@@ -10,82 +10,71 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.Vector;
 
-@Component // Make this a Spring component so @EventListener works
+@Component
 public class AdminDashboardForm extends JFrame {
 
    private JTable reservationTable;
    private DefaultTableModel tableModel;
 
    public AdminDashboardForm() {
-      setTitle("Admin Dashboard - Reservas Confirmadas");
+      setTitle("Panel de Administración - Reservas");
       setSize(800, 400);
-      setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // Don't exit app when admin closes
-      setLocationRelativeTo(null); // Center on screen
+      setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+      setLocationRelativeTo(null);
 
       initComponents();
       layoutComponents();
    }
 
    private void initComponents() {
-      // Define table columns
-      String[] columnNames = { "Guest Name", "Guest ID", "Guest Email", "Room No.", "Room Type", "Price/Night",
-            "Check-In", "Check-Out" };
+      String[] columnNames = { "Nombre Huésped", "Identificacion", "Email Huésped", "Habitación No.", "Tipo Habitación",
+            "Precio/Noche", "Check-In", "Check-Out" };
 
-      // Create a non-editable table model
       tableModel = new DefaultTableModel(columnNames, 0) {
          @Override
          public boolean isCellEditable(int row, int column) {
-            return false; // Make table read-only
+            return false;
          }
       };
 
       reservationTable = new JTable(tableModel);
       reservationTable.setFillsViewportHeight(true);
-      reservationTable.setAutoCreateRowSorter(true); // Enable sorting
+      reservationTable.setAutoCreateRowSorter(true);
    }
 
    private void layoutComponents() {
-      // Use JTabbedPane as requested for future expansion
       JTabbedPane tabbedPane = new JTabbedPane();
-
-      // Create panel for the reservations table
       JPanel reservationPanel = new JPanel(new BorderLayout());
       reservationPanel.add(new JScrollPane(reservationTable), BorderLayout.CENTER);
+      tabbedPane.addTab("Reservas Confirmadas", null, reservationPanel, "Ver reservas confirmadas");
 
-      // Add the reservation panel as the first tab
-      tabbedPane.addTab("Reservas Confirmadas", null, reservationPanel,
-            "Ver reservas confirmadas");
-
-      // Add the tabbed pane to the frame
       add(tabbedPane, BorderLayout.CENTER);
    }
 
-   // Listener for Spring Application Events
    @EventListener
    public void handleNewReservation(NewReservationConfirmedEvent event) {
       FinalBookingDetailsDTO details = event.getBookingDetails();
-      System.out.println("AdminDashboardForm: Received event for new reservation: " + details);
+      System.out.println("AdminDashboardForm: Evento recibido para nueva reserva: " + details);
 
-      // Ensure UI updates happen on the Swing Event Dispatch Thread
       SwingUtilities.invokeLater(() -> {
          Vector<Object> rowData = new Vector<>();
          rowData.add(details.getGuestName());
          rowData.add(details.getGuestId());
          rowData.add(details.getGuestEmail());
          rowData.add(details.getRoomNumber());
-         rowData.add(details.getRoomType() != null ? details.getRoomType().name() : "N/A"); // Handle potential null
+         rowData.add(details.getRoomType() != null ? details.getRoomType().name() : "N/A");
          rowData.add(details.getPricePerNight());
          rowData.add(details.getCheckInDate());
          rowData.add(details.getCheckOutDate());
 
          tableModel.addRow(rowData);
-         System.out.println("AdminDashboardForm: Added row to table.");
+         System.out.println("AdminDashboardForm: Fila añadida a la tabla.");
       });
    }
 
-   // Optional: Method to make the frame visible, called from Application runner
    public void display() {
-      // Ensure visibility toggling happens on the EDT
-      SwingUtilities.invokeLater(() -> setVisible(true));
+      SwingUtilities.invokeLater(() -> {
+         setVisible(true);
+      });
    }
 }

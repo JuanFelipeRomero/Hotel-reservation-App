@@ -23,14 +23,13 @@ public class AdminReservationListener {
    public void handleConfirmedReservation(@Payload FinalBookingDetailsDTO bookingDetails) {
       System.out.println("AdminListener: Received confirmed reservation from QUEUE_ADMIN: " + bookingDetails);
 
-      // Publish an application event so the UI can react to it
       try {
          NewReservationConfirmedEvent event = new NewReservationConfirmedEvent(this, bookingDetails);
          eventPublisher.publishEvent(event);
          System.out.println("AdminListener: Published NewReservationConfirmedEvent for UI.");
       } catch (Exception e) {
          System.err.println("AdminListener: Error publishing NewReservationConfirmedEvent: " + e.getMessage());
-         e.printStackTrace(); // Consider more robust error handling
+         e.printStackTrace();
       }
    }
 }

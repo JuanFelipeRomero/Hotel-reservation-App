@@ -3,10 +3,6 @@ package com.ucentral.rabbitmq_app.events;
 import com.ucentral.rabbitmq_app.dto.FinalBookingDetailsDTO;
 import org.springframework.context.ApplicationEvent;
 
-/**
- * Event published when a new reservation is confirmed and received from
- * RabbitMQ.
- */
 public class NewReservationConfirmedEvent extends ApplicationEvent {
 
    private final FinalBookingDetailsDTO bookingDetails;

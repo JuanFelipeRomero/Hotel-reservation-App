@@ -39,6 +39,20 @@ public class RabbitmqAppApplication {
 	}
 
 	public static void main(String[] args) {
+		// Set Nimbus Look and Feel for a more modern appearance
+		try {
+			for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
+				if ("Nimbus".equals(info.getName())) {
+					UIManager.setLookAndFeel(info.getClassName());
+					System.out.println("Nimbus Look and Feel set successfully.");
+					break;
+				}
+			}
+		} catch (Exception e) {
+			// If Nimbus is not available, proceed with the default L&F
+			System.err.println("Nimbus L&F not found or failed to set, using default: " + e.getMessage());
+		}
+
 		ConfigurableApplicationContext context = new SpringApplicationBuilder(RabbitmqAppApplication.class)
 				.headless(false)
 				.run(args);
@@ -48,7 +62,7 @@ public class RabbitmqAppApplication {
 	public CommandLineRunner commandLineRunner(AvailabilityService availabilityService, RabbitTemplate rabbitTemplate,
 			ApplicationContext ctx) {
 		return args -> {
-			// Launch Availability Check Form
+			// Availability Check Form
 			SwingUtilities.invokeLater(() -> {
 				try {
 					System.out.println("Attempting to launch AvailabilityCheckForm...");
@@ -61,7 +75,7 @@ public class RabbitmqAppApplication {
 				}
 			});
 
-			// Launch Cleaning Service UI
+			// Cleaning Service UI
 			SwingUtilities.invokeLater(() -> {
 				try {
 					System.out.println("Attempting to launch CleaningServiceUI...");
@@ -78,12 +92,12 @@ public class RabbitmqAppApplication {
 				}
 			});
 
-			// Launch Admin Dashboard Form
+			// Admin Dashboard Form
 			SwingUtilities.invokeLater(() -> {
 				try {
 					System.out.println("Attempting to launch AdminDashboardForm...");
 					AdminDashboardForm adminDashboard = ctx.getBean(AdminDashboardForm.class);
-					adminDashboard.display(); // Calls setVisible(true) via display()
+					adminDashboard.display();
 					System.out.println("AdminDashboardForm launched successfully.");
 				} catch (Exception e) {
 					System.err.println("Error launching AdminDashboardForm: " + e.getMessage());

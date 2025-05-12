@@ -137,13 +137,11 @@ public class RabbitMQConfig {
       return BindingBuilder.bind(adminQueue).to(reservaConfirmadaExchange);
    }
 
-   // Define el Bean MessageConverter que RabbitTemplate usará
    @Bean
    public MessageConverter jackson2JsonMessageConverter(ObjectMapper objectMapper) {
       return new Jackson2JsonMessageConverter(objectMapper);
    }
 
-   // RabbitTemplate usará automáticamente el bean MessageConverter definido
    @Bean
    public RabbitTemplate rabbitTemplate(final ConnectionFactory connectionFactory,
          final MessageConverter messageConverter) {
@@ -152,13 +150,11 @@ public class RabbitMQConfig {
       return rabbitTemplate;
    }
 
-   // Ensure a shared ObjectMapper bean is available for consistency
    @Bean
    public ObjectMapper objectMapper() {
       ObjectMapper mapper = new ObjectMapper();
-      mapper.registerModule(new JavaTimeModule()); // Register module for Java 8 Date/Time types
-      mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); // Ensure dates are serialized as ISO strings
-      // Add any other necessary ObjectMapper configuration here
+      mapper.registerModule(new JavaTimeModule());
+      mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
       return mapper;
    }
 
