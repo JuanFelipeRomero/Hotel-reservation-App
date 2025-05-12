@@ -65,6 +65,7 @@ public class AvailabilityCheckForm extends JFrame {
 
    private void layoutComponents() {
       JPanel inputPanel = new JPanel(new GridBagLayout());
+      inputPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
       GridBagConstraints gbc = new GridBagConstraints();
       gbc.insets = new Insets(5, 5, 5, 5);
       gbc.anchor = GridBagConstraints.WEST;
@@ -106,9 +107,6 @@ public class AvailabilityCheckForm extends JFrame {
    }
 
    private void handleCheckAvailability() {
-      JOptionPane.showMessageDialog(this, "Verificando disponibilidad...", "Información",
-            JOptionPane.INFORMATION_MESSAGE);
-
       Date selectedCheckInUtilDate = (Date) checkInDatePicker.getModel().getValue();
       Date selectedCheckOutUtilDate = (Date) checkOutDatePicker.getModel().getValue();
       RoomType selectedRoomType = (RoomType) roomTypeComboBox.getSelectedItem();
@@ -128,8 +126,18 @@ public class AvailabilityCheckForm extends JFrame {
          return;
       }
 
+      final JDialog verifyingDialog = new JDialog(this, "Procesando", false);
+      JLabel label = new JLabel("Verificando disponibilidad...", SwingConstants.CENTER);
+      label.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+      verifyingDialog.getContentPane().add(label);
+      verifyingDialog.pack();
+      verifyingDialog.setLocationRelativeTo(this);
+      verifyingDialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+      verifyingDialog.setVisible(true);
+
       try {
          if (this.rabbitTemplate == null) {
+            verifyingDialog.dispose();
             JOptionPane.showMessageDialog(this, "Error: Conexión con RabbitMQ no disponible.", "Error de Conexión",
                   JOptionPane.ERROR_MESSAGE);
             return;
@@ -142,14 +150,17 @@ public class AvailabilityCheckForm extends JFrame {
          rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_DISPONIBILIDAD,
                RabbitMQConfig.ROUTING_KEY_VERIFICAR_DISPONIBILIDAD,
                requestDTO);
+
+         verifyingDialog.dispose();
+
          System.out
                .println(
                      "Formulario UI: Datos enviados a RabbitMQ (Intercambio: " + RabbitMQConfig.EXCHANGE_DISPONIBILIDAD
                            + ", Clave de Enrutamiento: " + RabbitMQConfig.ROUTING_KEY_VERIFICAR_DISPONIBILIDAD + ") -> "
                            + requestDTO);
-         JOptionPane.showMessageDialog(this, "Solicitud de disponibilidad enviada. Esperando resultados...",
-               "Información", JOptionPane.INFORMATION_MESSAGE);
+
       } catch (Exception ex) {
+         verifyingDialog.dispose();
          System.err.println(
                "AvailabilityCheckForm: Error al enviar DTO de solicitud inicial a RabbitMQ: " + ex.getMessage());
          JOptionPane.showMessageDialog(this, "Error al enviar solicitud de disponibilidad. Por favor, revise los logs.",

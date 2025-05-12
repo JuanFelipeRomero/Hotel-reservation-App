@@ -1,7 +1,7 @@
 package com.ucentral.rabbitmq_app.services;
 
 import com.ucentral.rabbitmq_app.RabbitMQConfig;
-import com.ucentral.rabbitmq_app.model.Reservation;
+import com.ucentral.rabbitmq_app.dto.FinalBookingDetailsDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -12,8 +12,10 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 
 @Service
 public class NotificationService {
@@ -29,24 +31,28 @@ public class NotificationService {
    }
 
    @RabbitListener(queues = RabbitMQConfig.QUEUE_NOTIFICACIONES)
-   public void handleReservationConfirmedEvent(@Payload Reservation reservation) {
-      log.info("NotificationService: Evento de reserva confirmada recibido de RabbitMQ (Cola: {}) -> {}",
-            RabbitMQConfig.QUEUE_NOTIFICACIONES, reservation);
+   public void handleReservationConfirmedEvent(@Payload FinalBookingDetailsDTO bookingDetails) {
+      log.info("NotificationService: Detalles de reserva confirmada recibidos de RabbitMQ (Cola: {}) -> {}",
+            RabbitMQConfig.QUEUE_NOTIFICACIONES, bookingDetails);
 
-      if (reservation == null || reservation.getGuestEmail() == null || reservation.getRoom() == null) {
-         log.error("NotificationService: Datos de reserva inválidos recibidos para notificación: {}", reservation);
+      if (bookingDetails == null || bookingDetails.getGuestEmail() == null || bookingDetails.getRoomNumber() == null) {
+         log.error("NotificationService: Datos de reserva inválidos (DTO) recibidos para notificación: {}",
+               bookingDetails);
          return;
       }
 
       try {
-         String guestEmail = reservation.getGuestEmail();
+         String guestEmail = bookingDetails.getGuestEmail();
          String subject = "reserva registrada exitosamente";
 
-         long numberOfNights = ChronoUnit.DAYS.between(reservation.getCheckInDate(), reservation.getCheckOutDate());
+         LocalDate checkInDate = LocalDate.parse(bookingDetails.getCheckInDate(), DATE_FORMATTER);
+         LocalDate checkOutDate = LocalDate.parse(bookingDetails.getCheckOutDate(), DATE_FORMATTER);
+
+         long numberOfNights = ChronoUnit.DAYS.between(checkInDate, checkOutDate);
          if (numberOfNights <= 0)
             numberOfNights = 1;
 
-         double pricePerNight = reservation.getRoom().getPricePerNight();
+         double pricePerNight = bookingDetails.getPricePerNight() != null ? bookingDetails.getPricePerNight() : 0.0;
          double totalPrice = pricePerNight * numberOfNights;
 
          String body = String.format(
@@ -63,11 +69,11 @@ public class NotificationService {
                      "💰 Precio Total Estimado: $%.2f\n\n" +
                      "¡Gracias por elegirnos! 💖\n" +
                      "Esperamos que disfrute su estadía con nosotros 😊",
-               reservation.getGuestName(),
-               reservation.getRoom().getRoomNumber(),
-               reservation.getRoom().getRoomType().toString(),
-               reservation.getCheckInDate().format(DateTimeFormatter.ofPattern("dd 'de' MMMM 'de' yyyy")),
-               reservation.getCheckOutDate().format(DateTimeFormatter.ofPattern("dd 'de' MMMM 'de' yyyy")),
+               bookingDetails.getGuestName(),
+               bookingDetails.getRoomNumber(),
+               bookingDetails.getRoomType() != null ? bookingDetails.getRoomType().toString() : "N/A",
+               checkInDate.format(DateTimeFormatter.ofPattern("dd 'de' MMMM 'de' yyyy")),
+               checkOutDate.format(DateTimeFormatter.ofPattern("dd 'de' MMMM 'de' yyyy")),
                numberOfNights,
                pricePerNight,
                totalPrice);
@@ -79,12 +85,15 @@ public class NotificationService {
          mailSender.send(message);
          log.info("NotificationService: Correo de confirmación enviado exitosamente a {}", guestEmail);
 
+      } catch (DateTimeParseException e) {
+         log.error("NotificationService: Error parsing dates '{}', '{}' from booking details DTO: {}",
+               bookingDetails.getCheckInDate(), bookingDetails.getCheckOutDate(), e.getMessage(), e);
       } catch (MailException e) {
-         log.error("NotificationService: Error al enviar correo para Reserva ID {}: {}",
-               reservation.getId(), e.getMessage(), e);
+         log.error("NotificationService: Error al enviar correo para DTO {}: {}",
+               bookingDetails, e.getMessage(), e);
       } catch (Exception e) {
-         log.error("NotificationService: Error al procesar evento de reserva confirmada para Reserva ID {}: {}",
-               reservation.getId(), e.getMessage(), e);
+         log.error("NotificationService: Error al procesar evento de reserva confirmada DTO {}: {}",
+               bookingDetails, e.getMessage(), e);
       }
    }
 }

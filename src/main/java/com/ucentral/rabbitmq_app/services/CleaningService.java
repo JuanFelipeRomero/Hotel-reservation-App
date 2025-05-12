@@ -2,9 +2,9 @@ package com.ucentral.rabbitmq_app.services;
 
 import com.ucentral.rabbitmq_app.RabbitMQConfig;
 import com.ucentral.rabbitmq_app.dto.CleaningTaskUIDTO;
+import com.ucentral.rabbitmq_app.dto.FinalBookingDetailsDTO;
 import com.ucentral.rabbitmq_app.events.CleaningTaskUpdatedEvent;
 import com.ucentral.rabbitmq_app.events.NewCleaningTaskEvent;
-import com.ucentral.rabbitmq_app.model.Reservation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -13,6 +13,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -33,37 +35,48 @@ public class CleaningService {
    }
 
    @RabbitListener(queues = RabbitMQConfig.QUEUE_LIMPIEZA)
-   public void handleConfirmedReservationForCleaning(@Payload Reservation reservation) {
-      log.info("CleaningService: Reserva recibida para limpieza (Cola: {}): ResID {}, Habitación {}",
-            RabbitMQConfig.QUEUE_LIMPIEZA, reservation.getId(), reservation.getRoom().getRoomNumber());
+   public void handleConfirmedReservationForCleaning(@Payload FinalBookingDetailsDTO bookingDetails) {
+      log.info("CleaningService: Detalles de reserva recibidos para limpieza (Cola: {}): RoomID {}, Room# {}",
+            RabbitMQConfig.QUEUE_LIMPIEZA, bookingDetails.getRoomId(), bookingDetails.getRoomNumber());
 
-      if (reservation.getRoom() == null) {
+      if (bookingDetails.getRoomId() == null || bookingDetails.getRoomNumber() == null) {
          log.warn(
-               "CleaningService: Reserva ID {} no tiene detalles de habitación. No se puede crear tarea de limpieza.",
-               reservation.getId());
+               "CleaningService: Detalles de reserva incompletos (RoomID o RoomNumber es null). No se puede crear tarea de limpieza. DTO: {}",
+               bookingDetails);
          return;
       }
 
-      if (pendingCleaningTasks.containsKey(reservation.getId()) || cleanedTasks.containsKey(reservation.getId())) {
-         log.info("CleaningService: Tarea de limpieza para ResID {} ya existe o está completada. Ignorando.",
-               reservation.getId());
+      Long taskKey = bookingDetails.getRoomId();
+
+      if (pendingCleaningTasks.containsKey(taskKey) || cleanedTasks.containsKey(taskKey)) {
+         log.info("CleaningService: Tarea de limpieza para RoomID {} ya existe o está completada. Ignorando.",
+               taskKey);
+         return;
+      }
+
+      LocalDate checkOutDate;
+      try {
+         checkOutDate = LocalDate.parse(bookingDetails.getCheckOutDate());
+      } catch (DateTimeParseException e) {
+         log.error(
+               "CleaningService: Error parsing check-out date '{}' from booking details. Cannot create cleaning task.",
+               bookingDetails.getCheckOutDate(), e);
          return;
       }
 
       CleaningTaskUIDTO newTask = new CleaningTaskUIDTO(
-            reservation.getId(),
-            reservation.getRoom().getId(),
-            reservation.getRoom().getRoomNumber(),
-            reservation.getCheckOutDate() // Cleaning usually based on check-out
-      );
+            taskKey,
+            bookingDetails.getRoomId(),
+            bookingDetails.getRoomNumber(),
+            checkOutDate);
 
       pendingCleaningTasks.put(newTask.getReservationId(), newTask);
       log.info("CleaningService: Nueva tarea de limpieza añadida: {}", newTask);
       eventPublisher.publishEvent(new NewCleaningTaskEvent(this, newTask));
    }
 
-   public void markTaskAsCleaned(Long reservationId) {
-      CleaningTaskUIDTO taskToMove = pendingCleaningTasks.remove(reservationId);
+   public void markTaskAsCleaned(Long taskKey) {
+      CleaningTaskUIDTO taskToMove = pendingCleaningTasks.remove(taskKey);
       if (taskToMove != null) {
          taskToMove.setStatus("CLEANED");
          cleanedTasks.put(taskToMove.getReservationId(), taskToMove);
@@ -71,8 +84,8 @@ public class CleaningService {
          eventPublisher.publishEvent(new CleaningTaskUpdatedEvent(this, taskToMove));
       } else {
          log.warn(
-               "CleaningService: No se pudo marcar la tarea como limpiada. No se encontró tarea pendiente con ResID: {}",
-               reservationId);
+               "CleaningService: No se pudo marcar la tarea como limpiada. No se encontró tarea pendiente con ID: {}",
+               taskKey);
       }
    }
 

@@ -4,150 +4,150 @@ import com.ucentral.rabbitmq_app.dto.CleaningTaskUIDTO;
 import com.ucentral.rabbitmq_app.services.CleaningService;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.List;
+import java.util.Vector;
+import javax.swing.ListSelectionModel;
 
 public class CleaningServiceUI extends JFrame {
 
    private final CleaningService cleaningService;
-   private JPanel pendingTasksPanel;
-   private JPanel cleanedTasksPanel;
+   private JButton markCleanedButton;
+
+   private DefaultTableModel pendingTableModel;
+   private DefaultTableModel cleanedTableModel;
+   private JTable pendingTasksTable;
+   private JTable cleanedTasksTable;
 
    public CleaningServiceUI(CleaningService cleaningService) {
       this.cleaningService = cleaningService;
-      setTitle("Servicio de Limpieza del Hotel");
-      setSize(800, 600);
-      setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
-      setLocationRelativeTo(null);
+      setTitle("Servicio de Limpieza - Tareas");
+      setSize(800, 500);
+      setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+      setLocationByPlatform(true);
+
       initComponents();
       layoutComponents();
-      refreshAllTaskDisplays();
+      addEventListeners();
+      loadInitialData();
    }
 
    private void initComponents() {
-      pendingTasksPanel = new JPanel();
-      pendingTasksPanel.setLayout(new BoxLayout(pendingTasksPanel, BoxLayout.Y_AXIS));
-      JScrollPane pendingScrollPane = new JScrollPane(pendingTasksPanel);
-      pendingScrollPane.setPreferredSize(new Dimension(350, 500));
+      String[] columnNames = { "ID Reserva/Tarea", "Habitación No.", "Fecha Limpieza" };
 
-      cleanedTasksPanel = new JPanel();
-      cleanedTasksPanel.setLayout(new BoxLayout(cleanedTasksPanel, BoxLayout.Y_AXIS));
-      JScrollPane cleanedScrollPane = new JScrollPane(cleanedTasksPanel);
-      cleanedScrollPane.setPreferredSize(new Dimension(350, 500));
+      pendingTableModel = new DefaultTableModel(columnNames, 0) {
+         @Override
+         public boolean isCellEditable(int row, int column) {
+            return false;
+         }
+      };
+      pendingTasksTable = new JTable(pendingTableModel);
+      pendingTasksTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+      pendingTasksTable.setAutoCreateRowSorter(true);
+
+      cleanedTableModel = new DefaultTableModel(columnNames, 0) {
+         @Override
+         public boolean isCellEditable(int row, int column) {
+            return false;
+         }
+      };
+      cleanedTasksTable = new JTable(cleanedTableModel);
+      cleanedTasksTable.setAutoCreateRowSorter(true);
+      cleanedTasksTable.setRowSelectionAllowed(false);
+      cleanedTasksTable.setFocusable(false);
+
+      markCleanedButton = new JButton("Marcar como Limpiada");
    }
 
    private void layoutComponents() {
-      setLayout(new BorderLayout(10, 10));
-      JPanel mainPanel = new JPanel(new GridLayout(1, 2, 10, 0));
+      JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+      mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-      JScrollPane pendingScrollPaneForLayout = new JScrollPane(pendingTasksPanel);
-      pendingScrollPaneForLayout.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-      pendingScrollPaneForLayout.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-      JPanel leftPanel = new JPanel(new BorderLayout());
-      leftPanel.setBorder(BorderFactory.createTitledBorder("Habitaciones pendientes por limpieza"));
-      leftPanel.add(pendingScrollPaneForLayout, BorderLayout.CENTER);
+      JScrollPane pendingScrollPane = new JScrollPane(pendingTasksTable);
+      pendingScrollPane.setBorder(BorderFactory.createTitledBorder("Tareas Pendientes"));
 
-      JScrollPane cleanedScrollPaneForLayout = new JScrollPane(cleanedTasksPanel);
-      cleanedScrollPaneForLayout.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-      cleanedScrollPaneForLayout.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-      JPanel rightPanel = new JPanel(new BorderLayout());
-      rightPanel.setBorder(BorderFactory.createTitledBorder("Habitaciones Limpiadas"));
-      rightPanel.add(cleanedScrollPaneForLayout, BorderLayout.CENTER);
+      JScrollPane cleanedScrollPane = new JScrollPane(cleanedTasksTable);
+      cleanedScrollPane.setBorder(BorderFactory.createTitledBorder("Tareas Completadas"));
 
-      mainPanel.add(leftPanel);
-      mainPanel.add(rightPanel);
-      add(mainPanel, BorderLayout.CENTER);
+      JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, pendingScrollPane, cleanedScrollPane);
+      splitPane.setDividerLocation(200);
+      splitPane.setResizeWeight(0.5);
+
+      mainPanel.add(splitPane, BorderLayout.CENTER);
+
+      JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+      actionPanel.add(markCleanedButton);
+      mainPanel.add(actionPanel, BorderLayout.SOUTH);
+
+      add(mainPanel);
+   }
+
+   private void addEventListeners() {
+      markCleanedButton.addActionListener(e -> {
+         int selectedRow = pendingTasksTable.getSelectedRow();
+         if (selectedRow >= 0) {
+            int modelRow = pendingTasksTable.convertRowIndexToModel(selectedRow);
+            Long taskId = (Long) pendingTableModel.getValueAt(modelRow, 0);
+            if (taskId != null) {
+               System.out.println("UI: Marking task ID " + taskId + " as cleaned.");
+               cleaningService.markTaskAsCleaned(taskId);
+            }
+         } else {
+            JOptionPane.showMessageDialog(this,
+                  "Por favor, seleccione una tarea pendiente para marcarla como limpiada.",
+                  "Selección Requerida", JOptionPane.WARNING_MESSAGE);
+         }
+      });
+   }
+
+   private void loadInitialData() {
+      pendingTableModel.setRowCount(0);
+      cleanedTableModel.setRowCount(0);
+
+      List<CleaningTaskUIDTO> pending = cleaningService.getPendingCleaningTasks();
+      System.out.println("UI: Loading " + pending.size() + " pending tasks.");
+      for (CleaningTaskUIDTO task : pending) {
+         addTaskToTableModel(pendingTableModel, task);
+      }
+
+      List<CleaningTaskUIDTO> cleaned = cleaningService.getCleanedTasks();
+      System.out.println("UI: Loading " + cleaned.size() + " cleaned tasks.");
+      for (CleaningTaskUIDTO task : cleaned) {
+         addTaskToTableModel(cleanedTableModel, task);
+      }
+   }
+
+   private void addTaskToTableModel(DefaultTableModel model, CleaningTaskUIDTO task) {
+      Vector<Object> rowData = new Vector<>();
+      rowData.add(task.getReservationId());
+      rowData.add(task.getRoomNumber());
+      rowData.add(task.getCheckOutDate() != null ? task.getCheckOutDate().toString() : "N/A");
+      model.addRow(rowData);
    }
 
    public void handleNewTask(CleaningTaskUIDTO task) {
       SwingUtilities.invokeLater(() -> {
-         addPendingTaskToDisplay(task);
-         pendingTasksPanel.revalidate();
-         pendingTasksPanel.repaint();
+         System.out.println("UI: Received new task event: " + task);
+         addTaskToTableModel(pendingTableModel, task);
       });
    }
 
    public void handleTaskUpdated(CleaningTaskUIDTO task) {
       SwingUtilities.invokeLater(() -> {
+         System.out.println("UI: Received task updated event: " + task);
          if ("CLEANED".equals(task.getStatus())) {
-            refreshPendingTasksDisplay();
-            refreshCleanedTasksDisplay();
-         } else {
-            refreshAllTaskDisplays();
+            for (int i = 0; i < pendingTableModel.getRowCount(); i++) {
+               Long rowId = (Long) pendingTableModel.getValueAt(i, 0);
+               if (task.getReservationId().equals(rowId)) {
+                  pendingTableModel.removeRow(i);
+                  System.out.println("UI: Removed task ID " + task.getReservationId() + " from pending table.");
+                  break;
+               }
+            }
+            addTaskToTableModel(cleanedTableModel, task);
+            System.out.println("UI: Added task ID " + task.getReservationId() + " to cleaned table.");
          }
       });
-   }
-
-   public void refreshAllTaskDisplays() {
-      SwingUtilities.invokeLater(() -> {
-         refreshPendingTasksDisplay();
-         refreshCleanedTasksDisplay();
-      });
-   }
-
-   private void refreshPendingTasksDisplay() {
-      pendingTasksPanel.removeAll();
-      List<CleaningTaskUIDTO> pending = cleaningService.getPendingCleaningTasks();
-      if (pending.isEmpty()) {
-         pendingTasksPanel.add(new JLabel(" No hay tareas pendientes."));
-      }
-      for (CleaningTaskUIDTO task : pending) {
-         addPendingTaskToDisplay(task);
-      }
-      pendingTasksPanel.revalidate();
-      pendingTasksPanel.repaint();
-   }
-
-   private void refreshCleanedTasksDisplay() {
-      cleanedTasksPanel.removeAll();
-      List<CleaningTaskUIDTO> cleaned = cleaningService.getCleanedTasks();
-      if (cleaned.isEmpty()) {
-         cleanedTasksPanel.add(new JLabel(" Aún no hay habitaciones limpiadas."));
-      }
-      for (CleaningTaskUIDTO task : cleaned) {
-         addCleanedTaskToDisplay(task);
-      }
-      cleanedTasksPanel.revalidate();
-      cleanedTasksPanel.repaint();
-   }
-
-   private void addPendingTaskToDisplay(CleaningTaskUIDTO task) {
-      JPanel taskPanel = new JPanel(new BorderLayout(10, 0));
-      taskPanel.setBorder(BorderFactory.createEtchedBorder());
-      taskPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
-      taskPanel.setName("task-" + task.getReservationId());
-
-      JTextArea taskText = new JTextArea(String.format("Habitación: %s\nSalida: %s\n(ID Res: %d)", task.getRoomNumber(),
-            task.getCheckOutDate(), task.getReservationId()));
-      taskText.setEditable(false);
-      taskText.setOpaque(false);
-      taskText.setLineWrap(true);
-      taskText.setWrapStyleWord(true);
-
-      JButton cleanedButton = new JButton("Marcar como Limpiada");
-      cleanedButton.addActionListener(e -> cleaningService.markTaskAsCleaned(task.getReservationId()));
-
-      taskPanel.add(taskText, BorderLayout.CENTER);
-      taskPanel.add(cleanedButton, BorderLayout.EAST);
-      pendingTasksPanel.add(taskPanel);
-      pendingTasksPanel.add(Box.createRigidArea(new Dimension(0, 5)));
-   }
-
-   private void addCleanedTaskToDisplay(CleaningTaskUIDTO task) {
-      JPanel taskPanel = new JPanel(new BorderLayout(10, 0));
-      taskPanel.setBorder(BorderFactory.createEtchedBorder());
-      taskPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
-      taskPanel.setName("task-" + task.getReservationId());
-
-      JTextArea cleanedText = new JTextArea(
-            String.format("Habitación: %s\nSalida: %s\nEstado: LIMPIADA", task.getRoomNumber(),
-                  task.getCheckOutDate()));
-      cleanedText.setEditable(false);
-      cleanedText.setOpaque(false);
-      cleanedText.setLineWrap(true);
-      cleanedText.setWrapStyleWord(true);
-      taskPanel.add(cleanedText, BorderLayout.CENTER);
-      cleanedTasksPanel.add(taskPanel);
-      cleanedTasksPanel.add(Box.createRigidArea(new Dimension(0, 5)));
    }
 }

@@ -9,10 +9,14 @@ import com.ucentral.rabbitmq_app.services.CleaningService;
 import com.ucentral.rabbitmq_app.ui.AvailabilityCheckForm;
 import com.ucentral.rabbitmq_app.ui.BookingConfirmationForm;
 import com.ucentral.rabbitmq_app.ui.CleaningServiceUI;
+import com.ucentral.rabbitmq_app.ui.AdminDashboardForm;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.event.EventListener;
 
@@ -21,7 +25,10 @@ import javax.swing.*;
 @SpringBootApplication
 public class RabbitmqAppApplication {
 
-	private AvailabilityCheckForm mainForm;
+	@Autowired
+	private ApplicationContext applicationContext;
+
+	private AvailabilityCheckForm availabilityCheckForm;
 	private CleaningServiceUI cleaningForm;
 	private final RabbitTemplate rabbitTemplate;
 	private final CleaningService cleaningService;
@@ -32,38 +39,88 @@ public class RabbitmqAppApplication {
 	}
 
 	public static void main(String[] args) {
-		new SpringApplicationBuilder(RabbitmqAppApplication.class)
+		// Set Nimbus Look and Feel for a more modern appearance
+		try {
+			for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
+				if ("Nimbus".equals(info.getName())) {
+					UIManager.setLookAndFeel(info.getClassName());
+					System.out.println("Nimbus Look and Feel set successfully.");
+					break;
+				}
+			}
+		} catch (Exception e) {
+			// If Nimbus is not available, proceed with the default L&F
+			System.err.println("Nimbus L&F not found or failed to set, using default: " + e.getMessage());
+		}
+
+		ConfigurableApplicationContext context = new SpringApplicationBuilder(RabbitmqAppApplication.class)
 				.headless(false)
 				.run(args);
 	}
 
 	@Bean
-	// Re-inject RabbitTemplate here
-	public CommandLineRunner launchSwingUIs(AvailabilityService availabilityService, RabbitTemplate rabbitTemplateCL) {
+	public CommandLineRunner commandLineRunner(AvailabilityService availabilityService, RabbitTemplate rabbitTemplate,
+			ApplicationContext ctx) {
 		return args -> {
+			// Availability Check Form
 			SwingUtilities.invokeLater(() -> {
-				mainForm = new AvailabilityCheckForm(availabilityService, rabbitTemplateCL);
-				mainForm.setVisible(true);
+				try {
+					System.out.println("Attempting to launch AvailabilityCheckForm...");
+					this.availabilityCheckForm = new AvailabilityCheckForm(availabilityService, rabbitTemplate);
+					this.availabilityCheckForm.setVisible(true);
+					System.out.println("AvailabilityCheckForm launched successfully.");
+				} catch (Exception e) {
+					System.err.println("Error launching AvailabilityCheckForm: " + e.getMessage());
+					e.printStackTrace();
+				}
+			});
 
-				// Launch Cleaning Service UI
-				cleaningForm = new CleaningServiceUI(this.cleaningService);
-				cleaningForm.setVisible(true);
+			// Cleaning Service UI
+			SwingUtilities.invokeLater(() -> {
+				try {
+					System.out.println("Attempting to launch CleaningServiceUI...");
+					if (this.cleaningService == null) {
+						System.err.println("Error: CleaningService is null. Cannot launch CleaningServiceUI.");
+						return;
+					}
+					cleaningForm = new CleaningServiceUI(this.cleaningService);
+					cleaningForm.setVisible(true);
+					System.out.println("CleaningServiceUI launched successfully.");
+				} catch (Exception e) {
+					System.err.println("Error launching CleaningServiceUI: " + e.getMessage());
+					e.printStackTrace();
+				}
+			});
+
+			// Admin Dashboard Form
+			SwingUtilities.invokeLater(() -> {
+				try {
+					System.out.println("Attempting to launch AdminDashboardForm...");
+					AdminDashboardForm adminDashboard = ctx.getBean(AdminDashboardForm.class);
+					adminDashboard.display();
+					System.out.println("AdminDashboardForm launched successfully.");
+				} catch (Exception e) {
+					System.err.println("Error launching AdminDashboardForm: " + e.getMessage());
+					e.printStackTrace();
+				}
 			});
 		};
 	}
 
-	// Event Listener to handle RoomAvailableEvent
 	@EventListener
 	public void handleRoomAvailable(RoomAvailableEventData eventData) {
-		System.out.println("Listener de Eventos de Aplicación: RoomAvailableEvent recibido: " + eventData);
+		System.out.println("Application Listener: Received RoomAvailableEventData: " + eventData);
 		SwingUtilities.invokeLater(() -> {
-			// Use the class-level rabbitTemplate for the booking form
-			BookingConfirmationForm bookingForm = new BookingConfirmationForm(mainForm, eventData, this.rabbitTemplate);
+			RabbitTemplate rabbitTemplate = applicationContext.getBean(RabbitTemplate.class);
+
+			BookingConfirmationForm bookingForm = new BookingConfirmationForm(
+					this.availabilityCheckForm,
+					eventData,
+					rabbitTemplate);
 			bookingForm.setVisible(true);
 		});
 	}
 
-	// New Event Listener for Room Not Available
 	@EventListener
 	public void handleRoomNotAvailable(RoomNotAvailableEventData eventData) {
 		System.out.println("Listener de Eventos de Aplicación: RoomNotAvailableEvent recibido: " + eventData);
@@ -73,7 +130,7 @@ public class RabbitmqAppApplication {
 					eventData.getRoomType(),
 					eventData.getCheckInDate(),
 					eventData.getCheckOutDate());
-			JOptionPane.showMessageDialog(mainForm, // Parent component
+			JOptionPane.showMessageDialog(availabilityCheckForm,
 					message,
 					"Sin Disponibilidad",
 					JOptionPane.INFORMATION_MESSAGE);

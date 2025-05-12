@@ -72,15 +72,27 @@ public class RegisterReservationService {
                   log.info("Nueva reserva guardada exitosamente con ID: {}",
                               savedReservation.getId());
 
+                  // 5. Create DTO from saved entity to publish
+                  FinalBookingDetailsDTO confirmationDto = new FinalBookingDetailsDTO(
+                              savedReservation.getRoom().getId(),
+                              savedReservation.getRoom().getRoomNumber(),
+                              savedReservation.getRoom().getRoomType(),
+                              savedReservation.getRoom().getPricePerNight(),
+                              savedReservation.getCheckInDate().format(DATE_FORMATTER),
+                              savedReservation.getCheckOutDate().format(DATE_FORMATTER),
+                              savedReservation.getGuestName(),
+                              savedReservation.getGuestId(),
+                              savedReservation.getGuestEmail());
+
                   try {
                         rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_RESERVA_CONFIRMADA,
-                                    "",
-                                    savedReservation);
-                        log.info("Evento de reserva confirmada publicado a Intercambio '{}': {}",
-                                    RabbitMQConfig.EXCHANGE_RESERVA_CONFIRMADA, savedReservation);
+                                    "", // Routing key is ignored for Fanout exchanges
+                                    confirmationDto); // Send the DTO
+                        log.info("Evento de reserva confirmada (DTO) publicado a Intercambio '{}': {}",
+                                    RabbitMQConfig.EXCHANGE_RESERVA_CONFIRMADA, confirmationDto);
                   } catch (Exception e) {
                         log.error(
-                                    "Error al publicar evento de reserva confirmada para Reserva ID {}: {}",
+                                    "Error al publicar evento de reserva confirmada (DTO) para Reserva ID {}: {}",
                                     savedReservation.getId(), e.getMessage(), e);
                   }
 
