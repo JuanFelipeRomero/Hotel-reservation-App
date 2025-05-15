@@ -54,13 +54,13 @@ public class CleaningService {
          return;
       }
 
-      LocalDate checkOutDate;
+      LocalDate checkInDate;
       try {
-         checkOutDate = LocalDate.parse(bookingDetails.getCheckOutDate());
+         checkInDate = LocalDate.parse(bookingDetails.getCheckInDate());
       } catch (DateTimeParseException e) {
          log.error(
                "CleaningService: Error parsing check-out date '{}' from booking details. Cannot create cleaning task.",
-               bookingDetails.getCheckOutDate(), e);
+               bookingDetails.getCheckInDate(), e);
          return;
       }
 
@@ -68,7 +68,7 @@ public class CleaningService {
             taskKey,
             bookingDetails.getRoomId(),
             bookingDetails.getRoomNumber(),
-            checkOutDate);
+            checkInDate);
 
       pendingCleaningTasks.put(newTask.getReservationId(), newTask);
       log.info("CleaningService: Nueva tarea de limpieza añadida: {}", newTask);

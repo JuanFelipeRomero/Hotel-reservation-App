@@ -36,10 +36,10 @@ public class RabbitMQConfig {
    public static final String QUEUE_NOTIFICACIONES = "cola_notificaciones";
 
    // Cleaning Service Exchange/Queue/Key
-   public static final String EXCHANGE_CLEANING = "direct.cleaning";
-   public static final String QUEUE_CLEANING_TASKS = "cola_cleaning_tasks";
-   public static final String ROUTING_KEY_NEW_CLEANING_TASK = "new_cleaning_task";
-   public static final String ROUTING_KEY_UPDATE_CLEANING_TASK = "update_cleaning_task";
+   //public static final String EXCHANGE_CLEANING = "direct.cleaning";
+   //public static final String QUEUE_CLEANING_TASKS = "cola_cleaning_tasks";
+   //public static final String ROUTING_KEY_NEW_CLEANING_TASK = "new_cleaning_task";
+   //public static final String ROUTING_KEY_UPDATE_CLEANING_TASK = "update_cleaning_task";
 
    // Confirmed Reservation Fanout Exchange and Admin Queue (NEW)
    public static final String QUEUE_ADMIN = "cola_admin";
@@ -107,25 +107,6 @@ public class RabbitMQConfig {
          FanoutExchange reservaConfirmadaExchange) {
       return BindingBuilder.bind(notificacionesQueue).to(reservaConfirmadaExchange);
    }
-
-   // Cleaning Service
-   @Bean
-   public DirectExchange cleaningExchange() {
-      return new DirectExchange(EXCHANGE_CLEANING);
-   }
-
-   @Bean
-   public Queue cleaningTasksQueue() {
-      return new Queue(QUEUE_CLEANING_TASKS, true, false, false);
-   }
-
-   @Bean
-   public Binding bindingCleaningTasks(Queue cleaningTasksQueue, DirectExchange cleaningExchange) {
-      return BindingBuilder.bind(cleaningTasksQueue)
-            .to(cleaningExchange)
-            .with(ROUTING_KEY_NEW_CLEANING_TASK);
-   }
-
    // Confirmed Reservation Fanout Exchange and Admin Queue (NEW)
    @Bean
    public Queue adminQueue() {

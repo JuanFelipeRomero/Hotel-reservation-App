@@ -10,12 +10,12 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 
 @Component
-public class AdminReservationListener {
+public class AdminService {
 
    private final ApplicationEventPublisher eventPublisher;
 
    @Autowired
-   public AdminReservationListener(ApplicationEventPublisher eventPublisher) {
+   public AdminService(ApplicationEventPublisher eventPublisher) {
       this.eventPublisher = eventPublisher;
    }
 

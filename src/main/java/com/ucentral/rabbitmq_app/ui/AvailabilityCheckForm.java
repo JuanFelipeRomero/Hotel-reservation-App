@@ -163,7 +163,7 @@ public class AvailabilityCheckForm extends JFrame {
          verifyingDialog.dispose();
          System.err.println(
                "AvailabilityCheckForm: Error al enviar DTO de solicitud inicial a RabbitMQ: " + ex.getMessage());
-         JOptionPane.showMessageDialog(this, "Error al enviar solicitud de disponibilidad. Por favor, revise los logs.",
+         JOptionPane.showMessageDialog(this, "Error al enviar solicitud de disponibilidad.",
                "Error", JOptionPane.ERROR_MESSAGE);
       }
    }
