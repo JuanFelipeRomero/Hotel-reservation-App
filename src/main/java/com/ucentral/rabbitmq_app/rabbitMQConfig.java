@@ -35,12 +35,6 @@ public class RabbitMQConfig {
    public static final String QUEUE_LIMPIEZA = "cola_limpieza";
    public static final String QUEUE_NOTIFICACIONES = "cola_notificaciones";
 
-   // Cleaning Service Exchange/Queue/Key
-   //public static final String EXCHANGE_CLEANING = "direct.cleaning";
-   //public static final String QUEUE_CLEANING_TASKS = "cola_cleaning_tasks";
-   //public static final String ROUTING_KEY_NEW_CLEANING_TASK = "new_cleaning_task";
-   //public static final String ROUTING_KEY_UPDATE_CLEANING_TASK = "update_cleaning_task";
-
    // Confirmed Reservation Fanout Exchange and Admin Queue (NEW)
    public static final String QUEUE_ADMIN = "cola_admin";
 
